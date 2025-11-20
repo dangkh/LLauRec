@@ -41,7 +41,7 @@ def gen_user_matrix(all_edge, no_users):
 
 if __name__ == 	'__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', '-d', type=str, default='baby', help='name of dataset')
+    parser.add_argument('--dataset', '-d', type=str, default='book', help='name of dataset')
     args = parser.parse_args()
     dataset_name = args.dataset
     print(f'Generating u-u matrix for {dataset_name} ...\n')

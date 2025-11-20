@@ -8,7 +8,7 @@ load_meta_cols: [itemID, description, title, category]
 inter_splitting_label: 'x_label'
 TEXT_ID_FIELD: description
 
-inter_file_name: 'baby.inter'
+inter_file_name: 'book.inter'
 text_feature_file: 'text_feat.npy'
 user_graph_dict_file: 'user_graph_dict.npy'
 
