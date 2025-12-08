@@ -24,6 +24,8 @@ class VLIF(GeneralRecommender):
 
         num_user = self.n_users
         num_item = self.n_items
+        print('number of users: {}, number of items: {}'.format(num_user, num_item))
+        
         batch_size = config['train_batch_size']         # not used
         dim_x = config['embedding_size']
         self.feat_embed_dim = config['feat_embed_dim']

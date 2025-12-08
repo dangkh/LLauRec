@@ -95,4 +95,4 @@ if __name__ == '__main__':
     print(f'Item embeddings shape: {item_emb_np.shape}')
     numUser, numItem = train.shape[0], train.shape[1]
     assert item_emb_np.shape[0] == numItem, "Item embedding count does not match number of items."
-    print('Conversion completed.')
+    print('Conversion completed. {}, {} items, {} users.'.format(output_path, numItem, numUser))
