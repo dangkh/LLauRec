@@ -118,10 +118,10 @@ class VLIF(GeneralRecommender):
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
             self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=has_id, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.t_feat)
             self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=has_id, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.id_embedding.weight)
 
         self.user_graph = User_Graph_sample(num_user, 'add', self.dim_latent)
@@ -204,8 +204,7 @@ class VLIF(GeneralRecommender):
         pos_scores, neg_scores = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
         reg_embedding_loss_t = (self.t_preference[user] ** 2).mean() if self.t_preference is not None else 0.0
-        reg_embedding_loss_i = (self.id_preference[user] ** 2).mean() if self.id_preference is not None else 0.0
-        reg_loss = self.reg_weight * (reg_embedding_loss_t + reg_embedding_loss_i)
+        reg_loss = self.reg_weight * (reg_embedding_loss_t)
         return loss_value + reg_loss
 
     def full_sort_predict(self, interaction):
@@ -305,7 +304,10 @@ class GCN(torch.nn.Module):
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
     def forward(self, edge_index_drop,edge_index,features):
-        temp_features = F.leaky_relu(self.MLP(features)) if self.dim_latent else features
+        if self.has_id:
+            temp_features = F.leaky_relu(self.MLP(features)) if self.dim_latent else features
+        else:
+            temp_features = features
         # temp_features = self.MLP_1(F.leaky_relu(self.MLP(features))) if self.dim_latent else features
         x = torch.cat((self.preference, temp_features), dim=0).to(self.device)
         x = F.normalize(x).to(self.device)
