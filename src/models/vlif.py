@@ -39,7 +39,7 @@ class VLIF(GeneralRecommender):
         self.k = 40
         self.aggr_mode = config['aggr_mode']
         self.user_aggr_mode = 'softmax'
-        self.num_layer = 1
+        self.num_layer = 2
         self.cold_start = 0
         self.dataset = dataset
         #self.construction = 'weighted_max'
@@ -73,6 +73,11 @@ class VLIF(GeneralRecommender):
         #     torch.save(self.mm_adj, mm_adj_file)
 
         # packing interaction in training into edge_index
+
+        self.weight_u = nn.Parameter(nn.init.xavier_normal_(
+            torch.tensor(np.random.randn(self.num_user, 2, 1), dtype=torch.float32, requires_grad=True)))
+        self.weight_u.data = F.softmax(self.weight_u, dim=1)
+
         train_interactions = dataset.inter_matrix(form='coo').astype(np.float32)
         edge_index = self.pack_edge_index(train_interactions)
 
@@ -118,10 +123,10 @@ class VLIF(GeneralRecommender):
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
             self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.t_feat)
             self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.id_embedding.weight)
 
         self.user_graph = User_Graph_sample(num_user, 'add', self.dim_latent)
@@ -185,7 +190,13 @@ class VLIF(GeneralRecommender):
 
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
-        user_rep = torch.cat((user_repT, user_repI), dim=1)
+        # user_rep = torch.cat((user_repT, user_repI), dim=1)
+
+        user_repT = torch.unsqueeze(user_repT, 2)
+        user_repI = torch.unsqueeze(user_repI, 2)
+        user_rep = torch.cat((user_repT, user_repI), dim=2)
+        user_rep = self.weight_u.transpose(1,2)*user_rep
+        user_rep = torch.cat((user_rep[:,:,0], user_rep[:,:,1]), dim=1)
 
         h_u = self.user_graph(user_rep, self.epoch_user_graph, self.user_weight_matrix)
 
@@ -205,6 +216,7 @@ class VLIF(GeneralRecommender):
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
         reg_embedding_loss_t = (self.t_preference[user] ** 2).mean() if self.t_preference is not None else 0.0
         reg_loss = self.reg_weight * (reg_embedding_loss_t)
+        reg_loss += self.reg_weight * (self.weight_u ** 2).mean()
         return loss_value + reg_loss
 
     def full_sort_predict(self, interaction):
