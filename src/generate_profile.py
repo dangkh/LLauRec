@@ -108,6 +108,12 @@ if __name__ == '__main__':
 		review5DF['reviewerID'].isin(sampled_users)
 	].reset_index(drop=True)
 
-	print(f"[Review] Reviews after sampling: {len(review5DF_sampled)}")
-	print(review5DF_sampled.head())
+	# =========================
+	# Save filtered review data
+	# =========================
+	out_review_path = f"./data/review_{args.dataset}_5_filtered.csv"
+
+	review5DF_sampled.to_csv(out_review_path, index=False)
+	print(f"Saved filtered review file to: {out_review_path}")
+
 
