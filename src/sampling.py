@@ -5,10 +5,14 @@ import json
 import pandas as pd
 import csv
 import ast
+
 from tqdm import tqdm
 import yaml
 import gzip
+
+
 import argparse
+from tqdm import tqdm
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
@@ -22,47 +26,46 @@ if __name__ == '__main__':
 	meta_data = []
 	file_path = f'./data/meta_{args.dataset}_filtered.csv'
 	metaDF = pd.read_csv(file_path)
-	metaDF = pd.DataFrame(metaDF)
 	unique_meta_asin = set(metaDF['asin'])
 	print(f"[Meta] Unique ASINs: {len(unique_meta_asin)}")
 
 	# =========================
 	# Load review data
 	# =========================
-	file_path = f'./data/reviews_{args.dataset}_5_filtered_1k.csv'
+	file_path = f'./data/reviews_{args.dataset}_5_filtered.csv'
 	review5DF = pd.read_csv(file_path)
 	# review5DF = pd.DataFrame(review_data)
 	review_asin_set = set(review5DF['asin'])
 	unique_users = review5DF['reviewerID'].unique()
 
 	print(f"[Review] Unique ASINs: {len(review_asin_set), len(unique_users)}")
-	# =========================
-	# Profiling for users
-	# =========================
-
 
 	# =========================
-	# Profiling for items
+	# Sample 25% users
 	# =========================
+	sample_ratio = 0.01
+	random_state = 42
 
-	items = set(review5DF['asin'])
-	print("Number of items: ", len(items))
+	unique_users = review5DF['reviewerID'].unique()
+	print(f"[Review] Total users: {len(unique_users)}")
 
-	with open("src/prompts.yaml", "r") as f:
-		all_prompts = yaml.safe_load(f)
+	sampled_users = pd.Series(unique_users).sample(
+		frac=sample_ratio,
+		random_state=random_state
+	).values
 
-	userP = all_prompts[args.dataset]["user"]
-	itemP = all_prompts[args.dataset]["item"]
-	print(metaDF.iloc[0])
+	print(f"[Review] Sampled users (25%): {len(sampled_users)}")
 
-	asin2text = metaDF.set_index('asin')[['title', 'description']].to_dict('index')
+	review5DF_sampled = review5DF[
+		review5DF['reviewerID'].isin(sampled_users)
+	].reset_index(drop=True)
 
-	for idx in tqdm(asin2text):
-		i_info = asin2text[idx]
-		title, desc = i_info['title'], i_info['description']
-		itemPi = itemP.format(title, desc)
-		print(itemPi)
-		stop
+	# =========================
+	# Save filtered review data
+	# =========================
+	out_review_path = f"./data/reviews_{args.dataset}_5_filtered_1k.csv"
 
+	review5DF_sampled.to_csv(out_review_path, index=False)
+	print(f"Saved filtered review file to: {out_review_path}")
 
 
