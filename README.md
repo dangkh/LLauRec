@@ -15,5 +15,5 @@ VIRAL/
 │	├──README.md
 │   └─requirements.txt
 
-
+<!-- run convert.py to convert data from RLMRec to our format -->
 If not exist .inter, run convert.py
