@@ -1,6 +1,7 @@
 # LLAUREC
 pytorch implementation for ""
 
+```
 VIRAL/
 │
 ├── data/
@@ -14,6 +15,7 @@ VIRAL/
 │	├──get_text_feat.py              # Script to generate text embeddings
 │	├──README.md
 │   └─requirements.txt
+```
 
 <!-- run convert.py to convert data from RLMRec to our format -->
 If not exist .inter, run convert.py
