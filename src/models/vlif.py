@@ -113,16 +113,17 @@ class VLIF(GeneralRecommender):
 
         self.edge_index_dropt = torch.cat((self.edge_index_dropt, self.edge_index_dropt[[1, 0]]), dim=1)
 
+        self.MLP_user = nn.Linear(self.dim_latent * 2, self.dim_latent)
+
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
-            # self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-            #              num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
-            #              device=self.device, features=self.t_feat)
+            self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
+                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
+                         device=self.device, features=self.t_feat, preference=self.user_llm)
             self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
                          num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.id_embedding.weight)
-        self.all_text = torch.cat((self.user_llm, self.t_feat), dim=0)
-        self.prject_text = nn.Linear(self.all_text.size(1), self.dim_latent)  
+
         self.user_graph = User_Graph_sample(num_user, 'add', self.dim_latent)
 
 
@@ -172,9 +173,8 @@ class VLIF(GeneralRecommender):
         representation = None
 
         if self.t_feat is not None:
-            # self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
+            self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
             self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
-            self.t_rep = self.prject_text(self.all_text)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
@@ -188,7 +188,6 @@ class VLIF(GeneralRecommender):
         user_rep = torch.cat((user_repT, user_repI), dim=1)
 
         # h_u = self.user_graph(user_rep, self.epoch_user_graph, self.user_weight_matrix)
-
         # user_rep = 0.5 * (user_rep + h_u)
         
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
@@ -274,7 +273,7 @@ class User_Graph_sample(torch.nn.Module):
 
 class GCN(torch.nn.Module):
     def __init__(self,datasets, batch_size, num_user, num_item, dim_id, aggr_mode, num_layer, has_id, dropout,
-                 dim_latent=None,device = None,features=None):
+                 dim_latent=None, device = None, features=None, preference=None):
         super(GCN, self).__init__()
         self.batch_size = batch_size
         self.num_user = num_user
@@ -290,11 +289,13 @@ class GCN(torch.nn.Module):
         self.device = device
 
         if self.dim_latent:
-            self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
-                np.random.randn(num_user, self.dim_latent), dtype=torch.float32, requires_grad=True),
-                gain=1).to(self.device))
+            if preference is not None:
+                self.preference = nn.Parameter(preference).to(self.device)
+            else:
+                self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
+                    np.random.randn(num_user, self.dim_latent), dtype=torch.float32, requires_grad=True),
+                    gain=1).to(self.device))
             self.MLP = nn.Linear(self.dim_feat, self.dim_latent)
-            # self.MLP_1 = nn.Linear(4*self.dim_latent, self.dim_latent)
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
         else:
@@ -306,10 +307,11 @@ class GCN(torch.nn.Module):
     def forward(self, edge_index_drop,edge_index,features):
         if self.has_id:
             temp_features = F.leaky_relu(self.MLP(features)) if self.dim_latent else features
+            preference = F.leaky_relu(self.MLP(self.preference)) if self.dim_latent else self.preference
         else:
             temp_features = features
-        # temp_features = self.MLP_1(F.leaky_relu(self.MLP(features))) if self.dim_latent else features
-        x = torch.cat((self.preference, temp_features), dim=0).to(self.device)
+            preference = self.preference
+        x = torch.cat((preference, temp_features), dim=0).to(self.device)
         x = F.normalize(x).to(self.device)
         h = self.conv_embed_1(x, edge_index)  # equation 1
         h_1 = self.conv_embed_1(h, edge_index)
