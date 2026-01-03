@@ -113,17 +113,16 @@ class VLIF(GeneralRecommender):
 
         self.edge_index_dropt = torch.cat((self.edge_index_dropt, self.edge_index_dropt[[1, 0]]), dim=1)
 
-        self.MLP_user = nn.Linear(self.dim_latent * 2, self.dim_latent)
-
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
-            self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
-                         device=self.device, features=self.t_feat)
+            # self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
+            #              num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
+            #              device=self.device, features=self.t_feat)
             self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
                          num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.id_embedding.weight)
-
+        self.all_text = torch.cat((self.user_llm, self.t_feat), dim=0)
+        self.prject_text = nn.Linear(self.all_text.size(1), self.dim_latent)  
         self.user_graph = User_Graph_sample(num_user, 'add', self.dim_latent)
 
 
@@ -173,8 +172,9 @@ class VLIF(GeneralRecommender):
         representation = None
 
         if self.t_feat is not None:
-            self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
+            # self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
             self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
+            self.t_rep = self.prject_text(self.all_text)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
@@ -203,9 +203,9 @@ class VLIF(GeneralRecommender):
         user = interaction[0]
         pos_scores, neg_scores = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
-        reg_embedding_loss_t = (self.t_preference[user] ** 2).mean() if self.t_preference is not None else 0.0
-        reg_loss = self.reg_weight * (reg_embedding_loss_t)
-        return loss_value + reg_loss
+        # reg_embedding_loss_t = (self.t_preference[user] ** 2).mean() if self.t_preference is not None else 0.0
+        # reg_loss = self.reg_weight * (reg_embedding_loss_t)
+        return loss_value # + reg_loss
 
     def full_sort_predict(self, interaction):
         user_tensor = self.result_embed[:self.n_users]
