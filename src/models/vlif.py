@@ -113,9 +113,9 @@ class VLIF(GeneralRecommender):
 
         self.edge_index_dropt = torch.cat((self.edge_index_dropt, self.edge_index_dropt[[1, 0]]), dim=1)
 
-
         if self.t_feat is not None:
-            self.MLP_user = nn.Linear(self.t_feat.shape(-1), self.dim_latent)
+            self.MLP_user = nn.Linear(self.t_feat.shape[-1], self.dim_latent)
+            self.MLP_id = nn.Linear(self.dim_latent, self.dim_latent)
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
             # self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
             #              num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
@@ -176,6 +176,7 @@ class VLIF(GeneralRecommender):
             # self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
             self.t_rep = self.MLP_user(torch.cat((self.user_llm, self.t_feat), dim=0))
             self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
+            self.id_rep = self.MLP_id(self.id_rep)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
