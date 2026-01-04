@@ -174,9 +174,8 @@ class VLIF(GeneralRecommender):
 
         if self.t_feat is not None:
             # self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
-            self.t_rep = self.MLP_user(torch.cat((self.user_llm, self.t_feat), dim=0))
+            self.t_rep = F.normalize(self.MLP_user(torch.cat((self.user_llm, self.t_feat), dim=0)))
             self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
-            self.id_rep = self.MLP_id(self.id_rep)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
@@ -292,7 +291,7 @@ class GCN(torch.nn.Module):
 
         if self.dim_latent:
             if preference is not None:
-                self.preference = nn.Parameter(preference).to(self.device)
+                self.preference = nn.Parameter(preference)
             else:
                 self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
                     np.random.randn(num_user, self.dim_latent), dtype=torch.float32, requires_grad=True),
