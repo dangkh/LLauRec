@@ -118,10 +118,10 @@ class VLIF(GeneralRecommender):
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
             self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.t_feat)
             self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.id_embedding.weight)
 
         self.user_graph = User_Graph_sample(num_user, 'add', self.dim_latent)
@@ -187,9 +187,9 @@ class VLIF(GeneralRecommender):
         user_repI = self.id_rep[:self.num_user]
         user_rep = torch.cat((user_repT, user_repI), dim=1)
 
-        h_u = self.user_graph(user_rep, self.epoch_user_graph, self.user_weight_matrix)
+        # h_u = self.user_graph(user_rep, self.epoch_user_graph, self.user_weight_matrix)
 
-        user_rep = 0.5 * (user_rep + h_u)
+        # user_rep = 0.5 * (user_rep + h_u)
         
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
