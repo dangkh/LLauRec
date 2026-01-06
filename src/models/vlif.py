@@ -52,7 +52,7 @@ class VLIF(GeneralRecommender):
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
 
         if self.t_feat is not None:
-            self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
+            self.id_embedding = nn.Embedding(num_item, self.dim_latent)
 
         indices, text_adj = self.get_knn_adj_mat(self.t_feat)
         self.mm_adj = text_adj
