@@ -16,7 +16,6 @@ import torch_geometric
 from common.abstract_recommender import GeneralRecommender
 from common.loss import BPRLoss, EmbLoss
 from common.init import xavier_uniform_initialization
-from .CrossModal import CrossmodalNet
 
 class VLIF(GeneralRecommender):
     def __init__(self, config, dataset):
@@ -54,7 +53,6 @@ class VLIF(GeneralRecommender):
         self.mm_adj = None
 
         dataset_path = os.path.abspath(config['data_path'] + config['dataset'])
-        self.user_graph_dict = np.load(os.path.join(dataset_path, config['user_graph_dict_file']), allow_pickle=True).item()
         
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
 
@@ -118,10 +116,10 @@ class VLIF(GeneralRecommender):
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
             self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.t_feat)
             self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
                          device=self.device, features=self.id_embedding.weight)
 
         self.user_graph = User_Graph_sample(num_user, 'add', self.dim_latent)
@@ -150,11 +148,6 @@ class VLIF(GeneralRecommender):
         values = rows_inv_sqrt * cols_inv_sqrt
         return torch.sparse.FloatTensor(indices, values, adj_size)
 
-    
-    def pre_epoch_processing(self):
-        self.epoch_user_graph, self.user_weight_matrix = self.topk_sample(self.k)
-        self.user_weight_matrix = self.user_weight_matrix.to(self.device)
-
     def pack_edge_index(self, inter_mat):
         rows = inter_mat.row
         cols = inter_mat.col + self.n_users
@@ -182,15 +175,10 @@ class VLIF(GeneralRecommender):
         item_rep = torch.cat((item_repT, item_repI), dim=1)
         item_rep = self.item_item(item_rep)
 
-
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
         user_rep = torch.cat((user_repT, user_repI), dim=1)
 
-        h_u = self.user_graph(user_rep, self.epoch_user_graph, self.user_weight_matrix)
-
-        user_rep = 0.5 * (user_rep + h_u)
-        
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
         pos_item_tensor = self.result_embed[pos_item_nodes]
@@ -214,46 +202,6 @@ class VLIF(GeneralRecommender):
         temp_user_tensor = user_tensor[interaction[0], :]
         score_matrix = torch.matmul(temp_user_tensor, item_tensor.t())
         return score_matrix
-
-    def topk_sample(self, k):
-        user_graph_index = []
-        count_num = 0
-        user_weight_matrix = torch.zeros(len(self.user_graph_dict), k)
-        tasike = []
-        for i in range(k):
-            tasike.append(0)
-        for i in range(len(self.user_graph_dict)):
-            if len(self.user_graph_dict[i][0]) < k:
-                count_num += 1
-                if len(self.user_graph_dict[i][0]) == 0:
-                    # pdb.set_trace()
-                    user_graph_index.append(tasike)
-                    continue
-                user_graph_sample = self.user_graph_dict[i][0][:k]
-                user_graph_weight = self.user_graph_dict[i][1][:k]
-                while len(user_graph_sample) < k:
-                    rand_index = np.random.randint(0, len(user_graph_sample))
-                    user_graph_sample.append(user_graph_sample[rand_index])
-                    user_graph_weight.append(user_graph_weight[rand_index])
-                user_graph_index.append(user_graph_sample)
-
-
-                if self.user_aggr_mode == 'softmax':
-                    user_weight_matrix[i] = F.softmax(torch.tensor(user_graph_weight), dim=0)  # softmax
-                if self.user_aggr_mode == 'mean':
-                    user_weight_matrix[i] = torch.ones(k) / k  # mean
-                continue
-            user_graph_sample = self.user_graph_dict[i][0][:k]
-            user_graph_weight = self.user_graph_dict[i][1][:k]
-
-            if self.user_aggr_mode == 'softmax':
-                user_weight_matrix[i] = F.softmax(torch.tensor(user_graph_weight), dim=0)  # softmax
-            if self.user_aggr_mode == 'mean':
-                user_weight_matrix[i] = torch.ones(k) / k  # mean
-            user_graph_index.append(user_graph_sample)
-
-        # pdb.set_trace()
-        return user_graph_index, user_weight_matrix
 
 class User_Graph_sample(torch.nn.Module):
     def __init__(self, num_user, aggr_mode,dim_latent):

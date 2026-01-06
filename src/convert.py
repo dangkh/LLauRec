@@ -1,4 +1,5 @@
 # Convert from .pkl to interaction file .inter
+# Convert feature in .pkl to .npy
 
 import os
 import argparse
@@ -18,6 +19,9 @@ if __name__ == '__main__':
     assert os.path.exists(train_path), f"{train_path} does not exist."
     assert os.path.exists(test_path), f"{test_path} does not exist."    
     assert os.path.exists(valid_path), f"{valid_path} does not exist."
+
+    if os.path.exists(data_dir) is False:
+        os.makedirs(data_dir)
 
     train = pickle.load(open(train_path, 'rb'))
     test = pickle.load(open(test_path, 'rb'))
