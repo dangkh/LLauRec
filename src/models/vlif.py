@@ -35,20 +35,15 @@ class VLIF(GeneralRecommender):
         self.batch_size = batch_size
         self.num_user = num_user
         self.num_item = num_item
-        self.k = 40
         self.aggr_mode = config['aggr_mode']
         self.user_aggr_mode = 'softmax'
         self.num_layer = 1
-        self.cold_start = 0
         self.dataset = dataset
-        #self.construction = 'weighted_max'
-        self.construction = 'cat'
         self.reg_weight = config['reg_weight']
         self.drop_rate = 0.1
         self.t_rep = None
         self.t_preference = None
         self.dim_latent = 64
-        self.dim_feat = 128
         self.MLP_t = nn.Linear(self.dim_latent, self.dim_latent, bias=False)
         self.mm_adj = None
 
@@ -57,10 +52,9 @@ class VLIF(GeneralRecommender):
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
 
         if self.t_feat is not None:
-            self.text_embedding = nn.Embedding.from_pretrained(self.t_feat, freeze=False)
             self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
 
-        indices, text_adj = self.get_knn_adj_mat(self.text_embedding.weight.detach())
+        indices, text_adj = self.get_knn_adj_mat(self.t_feat)
         self.mm_adj = text_adj
         # if os.path.exists(mm_adj_file):
         #     self.mm_adj = torch.load(mm_adj_file)
@@ -116,13 +110,11 @@ class VLIF(GeneralRecommender):
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
             self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=self.dim_latent,
                          device=self.device, features=self.t_feat)
             self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=64,
+                         num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=self.dim_latent,
                          device=self.device, features=self.id_embedding.weight)
-
-        self.user_graph = User_Graph_sample(num_user, 'add', self.dim_latent)
 
 
     def get_knn_adj_mat(self, mm_embeddings):
@@ -163,7 +155,6 @@ class VLIF(GeneralRecommender):
         user_nodes, pos_item_nodes, neg_item_nodes = interaction[0], interaction[1], interaction[2]
         pos_item_nodes += self.n_users
         neg_item_nodes += self.n_users
-        representation = None
 
         if self.t_feat is not None:
             self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
@@ -202,22 +193,6 @@ class VLIF(GeneralRecommender):
         temp_user_tensor = user_tensor[interaction[0], :]
         score_matrix = torch.matmul(temp_user_tensor, item_tensor.t())
         return score_matrix
-
-class User_Graph_sample(torch.nn.Module):
-    def __init__(self, num_user, aggr_mode,dim_latent):
-        super(User_Graph_sample, self).__init__()
-        self.num_user = num_user
-        self.dim_latent = dim_latent
-        self.aggr_mode = aggr_mode
-
-    def forward(self, features,user_graph,user_matrix):
-        index = user_graph
-        u_features = features[index]
-        user_matrix = user_matrix.unsqueeze(1)
-        # pdb.set_trace()
-        u_pre = torch.matmul(user_matrix,u_features)
-        u_pre = u_pre.squeeze()
-        return u_pre
 
 
 class GCN(torch.nn.Module):
