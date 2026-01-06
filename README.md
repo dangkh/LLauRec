@@ -1,6 +1,7 @@
 # LLAUREC
 pytorch implementation for ""
 
+```
 VIRAL/
 │
 ├── data/
@@ -14,6 +15,14 @@ VIRAL/
 │	├──get_text_feat.py              # Script to generate text embeddings
 │	├──README.md
 │   └─requirements.txt
+```
 
+Convert dataset preproced in RLM [paper](https://arxiv.org/abs/2310.15950) to our standard.
+```sh
+python src/convert.py -d book
+```
 
-If not exist .inter, run convert.py
+Run
+```sh
+python src/main.py -d book
+```
