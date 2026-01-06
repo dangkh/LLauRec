@@ -25,14 +25,11 @@ class VLIF(GeneralRecommender):
         num_item = self.n_items
         print('number of users: {}, number of items: {}'.format(num_user, num_item))
         
-        batch_size = config['train_batch_size']         # not used
         dim_x = config['embedding_size']
         self.feat_embed_dim = config['feat_embed_dim']
         self.n_layers = config['n_mm_layers']
         self.knn_k = config['knn_k']
-        has_id = True
 
-        self.batch_size = batch_size
         self.num_user = num_user
         self.num_item = num_item
         self.aggr_mode = config['aggr_mode']
@@ -109,10 +106,10 @@ class VLIF(GeneralRecommender):
 
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
-            self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
+            self.t_gcn = GCN(self.dataset, num_user, num_item, dim_x, self.aggr_mode,
                          num_layer=self.num_layer, has_id=True, dropout=self.drop_rate, dim_latent=self.dim_latent,
                          device=self.device, features=self.t_feat)
-            self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
+            self.id_gcn = GCN(self.dataset, num_user, num_item, dim_x, self.aggr_mode,
                          num_layer=self.num_layer, has_id=False, dropout=self.drop_rate, dim_latent=self.dim_latent,
                          device=self.device, features=self.id_embedding.weight)
 
@@ -196,10 +193,9 @@ class VLIF(GeneralRecommender):
 
 
 class GCN(torch.nn.Module):
-    def __init__(self,datasets, batch_size, num_user, num_item, dim_id, aggr_mode, num_layer, has_id, dropout,
+    def __init__(self,datasets, num_user, num_item, dim_id, aggr_mode, num_layer, has_id, dropout,
                  dim_latent=None,device = None,features=None):
         super(GCN, self).__init__()
-        self.batch_size = batch_size
         self.num_user = num_user
         self.num_item = num_item
         self.datasets = datasets
