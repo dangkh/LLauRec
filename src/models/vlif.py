@@ -117,10 +117,9 @@ class VLIF(GeneralRecommender):
             # self.MLP_user = nn.Linear(self.t_feat.shape[-1], self.dim_latent)
             self.MLP_user = nn.Sequential(
                 nn.Linear(self.t_feat.shape[-1], 256),
-                nn.LeakyReLU(),
+                nn.GELU(),
                 nn.Dropout(0.1),
-                nn.Linear(256, self.dim_latent),
-                nn.LayerNorm(self.dim_latent),
+                nn.Linear(256, self.dim_latent)
             )
             self.MLP_id = nn.Linear(self.dim_latent, self.dim_latent)
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
@@ -181,7 +180,7 @@ class VLIF(GeneralRecommender):
 
         if self.t_feat is not None:
             # self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
-            self.t_rep = self.MLP_user(torch.cat((self.user_llm, self.t_feat), dim=0))
+            self.t_rep = F.normalize(self.MLP_user(torch.cat((self.user_llm, self.t_feat), dim=0)))
             self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
             # self.id_rep = self.MLP_id(self.id_rep)
 
