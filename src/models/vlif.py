@@ -101,7 +101,7 @@ class VLIF(GeneralRecommender):
         self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
 
 
-        self.use_featureGCN = False
+        self.use_featureGCN = True
 
 
         if self.use_featureGCN:
@@ -231,7 +231,7 @@ class GCN(torch.nn.Module):
         # make sure that user profile is not None when has_feature is True
         if self.has_feature:
             temp_features = F.leaky_relu(self.MLP(features)) 
-            userprofile = F.leaky_relu(self.user_MLP(self.user_profile))
+            userprofile = F.leaky_relu(self.user_MLP(F.normalize(self.user_profile,  p=2, dim=-1)))
             userprofile = torch.cat((userprofile, self.preference), dim=1)
         else:
             temp_features = features
