@@ -52,6 +52,8 @@ class VLIF(GeneralRecommender):
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
 
         self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
+        self.userMLP = nn.Linear(self.user_feat.shape[1], self.feat_embed_dim)
+        self.itemMLP = nn.Linear(self.t_feat.shape[1], self.feat_embed_dim)
 
         indices, text_adj = self.get_knn_adj_mat(self.t_feat)
         self.mm_adj = text_adj
@@ -96,14 +98,19 @@ class VLIF(GeneralRecommender):
         self.edge_index_dropt = torch.tensor(edge_index_dropt).t().contiguous().to(self.device)
         self.edge_index_dropt = torch.cat((self.edge_index_dropt, self.edge_index_dropt[[1, 0]]), dim=1)
 
-        if self.t_feat is not None:
-            self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
+        self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
+
+
+        self.use_featureGCN = False
+
+
+        if self.use_featureGCN:
             self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_feature=True, dropout=self.drop_rate, dim_latent=64,
-                         device=self.device, features=self.t_feat, user_profile=self.user_feat)
-            self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                         num_layer=self.num_layer, has_feature=False, dropout=self.drop_rate, dim_latent=64,
-                         device=self.device, features=self.id_embedding.weight)
+                            num_layer=self.num_layer, has_feature=True, dropout=self.drop_rate, dim_latent=64,
+                            device=self.device, features=self.t_feat, user_profile=self.user_feat)
+        self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
+                        num_layer=self.num_layer, has_feature=False, dropout=self.drop_rate, dim_latent=64,
+                        device=self.device, features=self.id_embedding.weight)
 
 
     def get_knn_adj_mat(self, mm_embeddings):
@@ -144,11 +151,14 @@ class VLIF(GeneralRecommender):
         user_nodes, pos_item_nodes, neg_item_nodes = interaction[0], interaction[1], interaction[2]
         pos_item_nodes += self.n_users
         neg_item_nodes += self.n_users
-        representation = None
 
-        if self.t_feat is not None:
+        if self.use_featureGCN:
             self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
-            self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
+        else:
+            item_features = F.leaky_relu(self.itemMLP(self.t_feat)) 
+            userprofile = F.leaky_relu(self.userMLP(self.user_feat))
+            self.t_rep = F.normalize(torch.cat((userprofile, item_features)))
+        self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
@@ -201,13 +211,14 @@ class GCN(torch.nn.Module):
         self.dropout = dropout
         self.device = device
         self.user_profile = user_profile
+        self.dim_user = self.dim_latent // 2
 
         if self.has_feature:
             self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
-                np.random.randn(num_user, self.dim_latent // 2), dtype=torch.float32, requires_grad=True),
+                np.random.randn(num_user, self.dim_latent - self.dim_user), dtype=torch.float32, requires_grad=True),
                 gain=1).to(self.device))
             self.MLP = nn.Linear(self.dim_feat, self.dim_latent)
-            self.user_MLP = nn.Linear(self.dim_feat, self.dim_latent // 2)
+            self.user_MLP = nn.Linear(self.dim_feat, self.dim_user)
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
         else:
