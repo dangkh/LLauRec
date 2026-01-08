@@ -96,7 +96,7 @@ if __name__ == '__main__':
     np.save(npy_output_path, item_emb_np)
     print(f'Item embeddings saved to: {npy_output_path}')
 
-    user_profile_path = os.path.join(data_dir, 'user_emb_np.pkl')
+    user_profile_path = os.path.join(data_dir, 'usr_emb_np.pkl')
     assert os.path.exists(user_profile_path), f"{user_profile_path} does not exist."
     with open(user_profile_path, 'rb') as f:
         user_emb = pickle.load(f)
