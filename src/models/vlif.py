@@ -220,7 +220,7 @@ class GCN(torch.nn.Module):
         # make sure that user profile is not None when has_feature is True
         if self.has_feature:
             temp_features = F.leaky_relu(self.MLP(features)) 
-            userprofile = self.user_MLP(self.user_profile) 
+            userprofile = F.leaky_relu(self.user_MLP(self.user_profile))
             userprofile = torch.cat((userprofile, self.preference), dim=1)
         else:
             temp_features = features
