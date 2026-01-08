@@ -1,13 +1,12 @@
-Books:
+book:
   user: |
     You will serve as an assistant to help me determine which types of books a specific user is likely to enjoy.
-    I will provide you with information about books that the user has purchased, as well as his or her reviews of those books.
+    I will provide you with information about books that the user has purchased.
     Here are the instructions:
       1. Each purchased book will be described in JSON format, with the following attributes:
       {{
           "title": {}
           "description": {}
-          "review": {}
       }}
 
       2. The information I will give you:
