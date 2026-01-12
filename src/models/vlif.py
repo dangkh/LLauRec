@@ -172,12 +172,12 @@ class VLIF(GeneralRecommender):
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
 
-        item_rep = torch.cat((item_repT, item_repI), dim=1)
+        item_rep = item_repT + item_repI
         item_rep = self.item_item(item_rep)
 
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
-        user_rep = torch.cat((user_repT, user_repI), dim=1)
+        user_rep = user_repT + user_repI
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
