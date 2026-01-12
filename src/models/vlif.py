@@ -101,8 +101,6 @@ class VLIF(GeneralRecommender):
 
         self.edge_index_dropt = torch.cat((self.edge_index_dropt, self.edge_index_dropt[[1, 0]]), dim=1)
 
-        self.MLP_user = nn.Linear(self.dim_latent * 2, self.dim_latent)
-
         if self.t_feat is not None:
             self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
             self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
