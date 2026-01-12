@@ -49,26 +49,16 @@ class VLIF(GeneralRecommender):
         self.t_preference = None
         self.dim_latent = 64
         self.dim_feat = 128
-        self.MLP_t = nn.Linear(self.dim_latent, self.dim_latent, bias=False)
         self.mm_adj = None
 
         dataset_path = os.path.abspath(config['data_path'] + config['dataset'])
         
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
 
-        if self.t_feat is not None:
-            self.text_embedding = nn.Embedding.from_pretrained(self.t_feat, freeze=False)
-            self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
+        self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
 
-        indices, text_adj = self.get_knn_adj_mat(self.text_embedding.weight.detach())
+        indices, text_adj = self.get_knn_adj_mat(self.t_feat)
         self.mm_adj = text_adj
-        # if os.path.exists(mm_adj_file):
-        #     self.mm_adj = torch.load(mm_adj_file)
-        # else:
-        #     if self.t_feat is not None:
-        #         indices, text_adj = self.get_knn_adj_mat(self.text_embedding.weight.detach())
-        #         self.mm_adj = text_adj
-        #     torch.save(self.mm_adj, mm_adj_file)
 
         # packing interaction in training into edge_index
         train_interactions = dataset.inter_matrix(form='coo').astype(np.float32)
@@ -165,9 +155,8 @@ class VLIF(GeneralRecommender):
         neg_item_nodes += self.n_users
         representation = None
 
-        if self.t_feat is not None:
-            self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
-            self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
+        self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
+        self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
@@ -191,9 +180,7 @@ class VLIF(GeneralRecommender):
         user = interaction[0]
         pos_scores, neg_scores = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
-        reg_embedding_loss_t = (self.t_preference[user] ** 2).mean() if self.t_preference is not None else 0.0
-        reg_loss = self.reg_weight * (reg_embedding_loss_t)
-        return loss_value + reg_loss
+        return loss_value 
 
     def full_sort_predict(self, interaction):
         user_tensor = self.result_embed[:self.n_users]
@@ -242,7 +229,6 @@ class GCN(torch.nn.Module):
                 np.random.randn(num_user, self.dim_latent), dtype=torch.float32, requires_grad=True),
                 gain=1).to(self.device))
             self.MLP = nn.Linear(self.dim_feat, self.dim_latent)
-            # self.MLP_1 = nn.Linear(4*self.dim_latent, self.dim_latent)
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
         else:
@@ -256,7 +242,6 @@ class GCN(torch.nn.Module):
             temp_features = F.leaky_relu(self.MLP(features)) if self.dim_latent else features
         else:
             temp_features = features
-        # temp_features = self.MLP_1(F.leaky_relu(self.MLP(features))) if self.dim_latent else features
         x = torch.cat((self.preference, temp_features), dim=0).to(self.device)
         x = F.normalize(x).to(self.device)
         h = self.conv_embed_1(x, edge_index)  # equation 1
