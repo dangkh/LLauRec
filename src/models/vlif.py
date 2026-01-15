@@ -101,13 +101,6 @@ class VLIF(GeneralRecommender):
         self.t_drop_ze = torch.zeros(len(self.dropt_node_idx), self.t_feat.size(1)).to(self.device)
 
 
-        self.use_featureGCN = True
-
-
-        if self.use_featureGCN:
-            self.t_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
-                            num_layer=self.num_layer, has_feature=True, dropout=self.drop_rate, dim_latent=64,
-                            device=self.device, features=self.t_feat, user_profile=self.user_feat)
         self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
                         num_layer=self.num_layer, has_feature=False, dropout=self.drop_rate, dim_latent=64,
                         device=self.device, features=self.id_embedding.weight)
@@ -152,12 +145,11 @@ class VLIF(GeneralRecommender):
         pos_item_nodes += self.n_users
         neg_item_nodes += self.n_users
 
-        if self.use_featureGCN:
-            self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, self.t_feat)
-        else:
-            item_features = F.leaky_relu(self.itemMLP(self.t_feat)) 
-            userprofile = F.leaky_relu(self.userMLP(self.user_feat))
-            self.t_rep = F.normalize(torch.cat((userprofile, item_features)))
+
+        item_features = F.normalize(self.itemMLP(self.t_feat), p=2, dim=-1)
+        userprofile = F.normalize(self.userMLP(self.user_feat), p=2, dim=-1)
+        self.t_rep = F.normalize(torch.cat((userprofile, item_features)))
+
         self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
 
         item_repT = self.t_rep[self.num_user:]
