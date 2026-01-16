@@ -54,7 +54,8 @@ class VLIF(GeneralRecommender):
         self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
         self.userMLP = nn.Linear(self.user_feat.shape[1], self.feat_embed_dim)
         self.itemMLP = nn.Linear(self.t_feat.shape[1], self.feat_embed_dim)
-
+        self.item_itemMLP = nn.Linear(self.feat_embed_dim, self.feat_embed_dim)
+        self.user_userMLP = nn.Linear(self.feat_embed_dim, self.feat_embed_dim)
         indices, text_adj = self.get_knn_adj_mat(self.t_feat)
         self.mm_adj = text_adj
 
@@ -146,21 +147,21 @@ class VLIF(GeneralRecommender):
         neg_item_nodes += self.n_users
 
 
-        # item_features = F.normalize(self.itemMLP(self.t_feat), p=2, dim=-1)
-        # userprofile = F.normalize(self.userMLP(self.user_feat), p=2, dim=-1)
-        self.t_rep = torch.cat((self.user_feat, self.t_feat))
+        item_features = F.leaky_relu(self.itemMLP(self.t_feat))
+        userprofile = F.leaky_relu(self.userMLP(self.user_feat))
+        self.t_rep = F.normalize(torch.cat((userprofile, item_features)))
 
         self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
 
-        item_rep = torch.cat((item_repT, item_repI), dim=1)
+        item_rep = self.item_itemMLP(torch.cat((item_repT, item_repI), dim=1))
         item_rep = self.item_item(item_rep)
 
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
-        user_rep = torch.cat((user_repT, user_repI), dim=1)
+        user_rep = self.user_userMLP(torch.cat((user_repT, user_repI), dim=1))
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
