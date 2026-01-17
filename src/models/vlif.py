@@ -154,12 +154,12 @@ class VLIF(GeneralRecommender):
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
 
-        item_rep = torch.cat((item_repT, item_repI, item_feat), dim=1)
+        item_rep = torch.cat((item_repT, item_repI), dim=1)
         item_rep = self.item_item(item_rep)
 
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
-        user_rep = torch.cat((user_repT, user_repI, user_feat), dim=1)
+        user_rep = torch.cat((user_repT + user_feat, user_repI ), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
@@ -205,19 +205,19 @@ class GCN(torch.nn.Module):
         if self.has_feature:
             self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
                 np.random.randn(num_user, self.dim_latent), dtype=torch.float32, requires_grad=True),
-                gain=1).to(self.device))
+                gain=1))
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
         else:
             self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
                 np.random.randn(num_user, self.dim_feat), dtype=torch.float32, requires_grad=True),
-                gain=1).to(self.device))
+                gain=1))
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
     def forward(self, edge_index_drop,edge_index,features):
         temp_features = features
         temp_profile = self.preference
-        x = torch.cat((temp_profile, temp_features), dim=0).to(self.device)
-        x = F.normalize(x).to(self.device)
+        x = torch.cat((temp_profile, temp_features), dim=0)
+        x = F.normalize(x)
         h = self.conv_embed_1(x, edge_index)  # equation 1
         h_1 = self.conv_embed_1(h, edge_index)
 
