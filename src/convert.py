@@ -4,6 +4,7 @@
 import os
 import argparse
 import pickle
+import numpy as np
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -49,7 +50,6 @@ if __name__ == '__main__':
 
         # If it's a numpy array (2D) convert nonzero entries
         try:
-            import numpy as np
             if hasattr(mat, 'ndim') and mat.ndim == 2:
                 rows, cols = mat.nonzero()
                 data = mat[rows, cols]
@@ -90,13 +90,19 @@ if __name__ == '__main__':
     with open(embed_path, 'rb') as f:
         item_emb = pickle.load(f)
     # Convert item embeddings to numpy array and save as .npy
-    import numpy as np
-    print(item_emb.shape)
     item_emb_np = np.array(item_emb)
     npy_output_path = os.path.join(data_dir, 'text_feat.npy')
     np.save(npy_output_path, item_emb_np)
     print(f'Item embeddings saved to: {npy_output_path}')
-    print(f'Item embeddings shape: {item_emb_np.shape}')
     numUser, numItem = train.shape[0], train.shape[1]
     assert item_emb_np.shape[0] == numItem, "Item embedding count does not match number of items."
     print('Conversion completed. {}, {} items, {} users.'.format(output_path, numItem, numUser))
+
+    user_profile_path = os.path.join(data_dir, 'usr_emb_np.pkl')
+    assert os.path.exists(user_profile_path), f"{user_profile_path} does not exist."
+    with open(user_profile_path, 'rb') as f:
+        user_emb = pickle.load(f)
+    user_emb_np = np.array(user_emb)
+    user_npy_output_path = os.path.join(data_dir, 'user_feat.npy')
+    np.save(user_npy_output_path, user_emb_np)
+    print(f'User embeddings saved to: {user_npy_output_path}')
