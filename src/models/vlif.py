@@ -51,8 +51,8 @@ class VLIF(GeneralRecommender):
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
 
         self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
-        self.mlp_item = nn.Linear(self.t_feat.shape[-1], self.dim_latent)
-        self.mlp_user = nn.Linear(self.t_feat.shape[-1], self.dim_latent)
+        self.mlp_item = nn.Linear(self.t_feat.shape[-1], self.dim_latent, bias=False)
+        self.mlp_user = nn.Linear(self.t_feat.shape[-1], self.dim_latent, bias=False)
 
         indices, text_adj = self.get_knn_adj_mat(self.t_feat)
         self.mm_adj = text_adj
