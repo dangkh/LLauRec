@@ -146,7 +146,7 @@ class VLIF(GeneralRecommender):
         neg_item_nodes += self.n_users
 
         item_feat = self.mlp_item(self.t_feat)
-        user_feat = self.mlp_user(self.user_feat)
+        user_feat = F.normalize(self.mlp_user(self.user_feat))
         
         self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, item_feat)
         self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
@@ -159,7 +159,7 @@ class VLIF(GeneralRecommender):
 
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
-        user_rep = torch.cat((user_repT + 0.1 * user_feat, user_repI ), dim=1)
+        user_rep = torch.cat((user_repT +  user_feat, user_repI ), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
