@@ -159,7 +159,7 @@ class VLIF(GeneralRecommender):
 
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
-        user_rep = torch.cat((user_repT + user_feat, user_repI ), dim=1)
+        user_rep = torch.cat((user_repT + 0.1 * user_feat, user_repI ), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
@@ -220,8 +220,9 @@ class GCN(torch.nn.Module):
         x = F.normalize(x)
         h = self.conv_embed_1(x, edge_index)  # equation 1
         h_1 = self.conv_embed_1(h, edge_index)
+        h_2 = self.conv_embed_1(h_1, edge_index)
 
-        x_hat =h + x +h_1
+        x_hat =h + x + h_1 + h_2
         return x_hat, self.preference
 
 
