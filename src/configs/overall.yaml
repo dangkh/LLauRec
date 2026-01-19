@@ -28,7 +28,7 @@ NEG_PREFIX: neg__
 
 # evaluation settings
 metrics: ["Recall", "NDCG", "Precision", "MAP"]
-topk: [5, 10, 20, 50]
+topk: [5, 10, 15, 20]
 valid_metric: Recall@20
 eval_batch_size: 4096
 
