@@ -206,6 +206,7 @@ if __name__ == '__main__':
 	listUser = list(user_interactions.keys())
 	users = listUser[args.shard::args.num_shards]
 
+	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}_{args.shard}.json'
 	for uid in tqdm(users):
 		u_items = user_interactions[uid]
 		itemInfo = ""
@@ -226,10 +227,10 @@ if __name__ == '__main__':
 		# for c in listC:
 		# 	candidateInfo += itemDesc[c]
 		user_profiles[uid] = { "summary": summary }
-	
-	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}_{args.shard}.json'
-	with open(user_profile_path, 'w', encoding='utf-8') as f:
-		json.dump(user_profiles, f, ensure_ascii=False, indent=4)
+
+		if (len(user_profiles) + 1) % 100 == 0:
+			with open(user_profile_path, 'w', encoding='utf-8') as f:
+				json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 	
 	# stat for candidate
 	print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))
