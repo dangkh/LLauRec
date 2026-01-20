@@ -7,7 +7,9 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import os
 import random
-# from unsloth import FastLanguageModel
+from unsloth import FastLanguageModel
+import torch
+
 # from trl import SFTTrainer
 # from transformers import TrainingArguments
 # from unsloth import is_bfloat16_supported
@@ -44,18 +46,32 @@ def build_item_item_knn(itemDesc, top_k=50, metric="cosine", return_scores=False
     if not return_scores:
         return item_item
 
-def getDescribe(vlmModel, tokenizer, link = None, title = None, sysPrompt = None, myPrompt = None):
-    
-	messages=[
-		{"role": "system", "content": sysPrompt},
-		{"role": "user", "content": myPrompt},
+
+def generate_summary(model, tokenizer, system_prompt, content):
+	messages = [
+		{"role": "system", "content": system_prompt},
+		{"role" : "user", 
+		"content" : content}
 	]
-	input_text = tokenizer.apply_chat_template(messages, add_generation_prompt = True)
-	inputs = tokenizer(image, input_text, add_special_tokens = False, return_tensors = "pt").to(model.device)
-	output = vlmModel.generate(**inputs, max_new_tokens=256, temperature=0.1, do_sample=False,)
+	input_text = tokenizer.apply_chat_template(
+		messages,
+		tokenize = False,
+		add_generation_prompt = True, # Must add for generation
+	)
+	inputs = tokenizer(
+		input_text,
+		return_tensors = "pt",
+		add_special_tokens = True,
+	).to("cuda")
+
+	output = model.generate(
+		**inputs,
+		max_new_tokens = 1000, # Increase for longer outputs!
+		temperature = 0.7, top_p = 0.8, top_k = 20, # For non thinking
+		do_sample = False
+	)
 	generated_tokens = output[0][inputs["input_ids"].shape[-1]:]
-	output_text = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
-	return output_text
+	return tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
@@ -140,6 +156,46 @@ if __name__ == '__main__':
 		np.save(item_item_path, item_kitem)
 
 
+	fourbit_models = [
+		"unsloth/Qwen3-4B-Instruct-2507-unsloth-bnb-4bit", # Qwen 14B 2x faster
+		"unsloth/Qwen3-4B-Thinking-2507-unsloth-bnb-4bit",
+		"unsloth/Qwen3-8B-unsloth-bnb-4bit",
+		"unsloth/Qwen3-14B-unsloth-bnb-4bit",
+		"unsloth/Qwen3-32B-unsloth-bnb-4bit",
+
+		# 4bit dynamic quants for superior accuracy and low memory use
+		"unsloth/gemma-3-12b-it-unsloth-bnb-4bit",
+		"unsloth/Phi-4",
+		"unsloth/Llama-3.1-8B",
+		"unsloth/Llama-3.2-3B",
+		"unsloth/orpheus-3b-0.1-ft-unsloth-bnb-4bit" # [NEW] We support TTS models!
+	] # More models at https://huggingface.co/unsloth
+
+	model, tokenizer = FastLanguageModel.from_pretrained(
+		model_name = "unsloth/Qwen3-4B-Instruct-2507",
+		max_seq_length = 2048, # Choose any for long context!
+		load_in_4bit = True,  # 4 bit quantization to reduce memory
+		load_in_8bit = False, # [NEW!] A bit more accurate, uses 2x memory
+		full_finetuning = False, # [NEW!] We have full finetuning now!
+		# token = "hf_...", # use one if using gated models
+	)
+
+	model = FastLanguageModel.get_peft_model(
+		model,
+		r = 32, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+		target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+						"gate_proj", "up_proj", "down_proj",],
+		lora_alpha = 32,
+		lora_dropout = 0, # Supports any, but = 0 is optimized
+		bias = "none",    # Supports any, but = "none" is optimized
+		# [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
+		use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
+		random_state = 3407,
+		use_rslora = False,  # We support rank stabilized LoRA
+		loftq_config = None, # And LoftQ
+	)
+
+
 	user_profiles = {}
 	checkarray = []
 	for uid in tqdm(user_interactions.keys()):
@@ -147,6 +203,12 @@ if __name__ == '__main__':
 		itemInfo = ""
 		for item in u_items:
 			itemInfo += itemDesc[item]
+		
+		summary = generate_summary(model, tokenizer, sys_prompt, itemInfo)
+		print("output: ", summary)
+		
+		print("=== Summary ===")
+		print(summary['summarization'])
 		# candidates = item_kitem[u_items[-1]]
 		# listC = []
 		# for c in candidates:
@@ -158,7 +220,6 @@ if __name__ == '__main__':
 		# candidateInfo = ""
 		# for c in listC:
 		# 	candidateInfo += itemDesc[c]
-		print(itemInfo)
 		stop
 	
 	
