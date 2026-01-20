@@ -9,6 +9,7 @@ import os
 import random
 from unsloth import FastLanguageModel
 import torch
+import json
 
 # from trl import SFTTrainer
 # from transformers import TrainingArguments
@@ -71,7 +72,7 @@ def generate_summary(model, tokenizer, system_prompt, content):
 		do_sample = False
 	)
 	generated_tokens = output[0][inputs["input_ids"].shape[-1]:]
-	return tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+	return json.loads(tokenizer.decode(generated_tokens, skip_special_tokens=True).strip())
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
@@ -196,7 +197,7 @@ if __name__ == '__main__':
 	)
 
 
-	user_profiles = {}
+	user_profiles = []
 	checkarray = []
 	for uid in tqdm(user_interactions.keys()):
 		u_items = user_interactions[uid]
@@ -205,10 +206,7 @@ if __name__ == '__main__':
 			itemInfo += itemDesc[item]
 		
 		summary = generate_summary(model, tokenizer, sys_prompt, itemInfo)
-		print("output: ", summary)
-		
-		print("=== Summary ===")
-		print(summary['summarization'])
+
 		# candidates = item_kitem[u_items[-1]]
 		# listC = []
 		# for c in candidates:
@@ -220,8 +218,11 @@ if __name__ == '__main__':
 		# candidateInfo = ""
 		# for c in listC:
 		# 	candidateInfo += itemDesc[c]
-		stop
+		user_profiles.append(summary)
 	
+	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}.json'
+	with open(user_profile_path, 'w', encoding='utf-8') as f:
+		json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 	
 	# stat for candidate
 	print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))
