@@ -78,6 +78,9 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
+	parser.add_argument("--shard", type=int, default=0)
+	parser.add_argument("--num_shards", type=int, default=1)
+	parser.add_argument("--out", type=str, default="out.jsonl")
 	args, _ = parser.parse_known_args()
 
 	# =========================
@@ -200,7 +203,10 @@ if __name__ == '__main__':
 
 	user_profiles = {}
 	checkarray = []
-	for uid in tqdm(user_interactions.keys()):
+	listUser = list(user_interactions.keys())
+	users = listUser[args.shard::args.num_shards]
+
+	for uid in tqdm(users):
 		u_items = user_interactions[uid]
 		itemInfo = ""
 		for item in u_items[-5:]:
@@ -221,7 +227,7 @@ if __name__ == '__main__':
 		# 	candidateInfo += itemDesc[c]
 		user_profiles[uid] = { "summary": summary }
 	
-	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}.json'
+	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}_{args.shard}.json'
 	with open(user_profile_path, 'w', encoding='utf-8') as f:
 		json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 	
