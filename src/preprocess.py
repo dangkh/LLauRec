@@ -46,7 +46,6 @@ if __name__ == '__main__':
 	print(f"Sample iid_asin: {iid_df.sample(5)}")
 
 
-
 	# =========================
 	# Load train data
 	# =========================
@@ -81,6 +80,11 @@ if __name__ == '__main__':
 	prf_items = set(prf.keys())
 	print("Number of items in metaDF and prf:", len(meta_items & prf_items))
 	print("Number of items only in metaDF:", len(meta_items - prf_items))
+
+	prf_text = []
+	for idx in prf_items:
+		item_profile = prf[idx]['profile']
+		prf_text.append(item_profile)
 
 	# random a single sample of item profiles
 	randomID = random.choice(list(prf_items))
@@ -120,9 +124,8 @@ if __name__ == '__main__':
 		how="left"
 	)
 	merged_df = merged_df.sort_values(by='iid').reset_index(drop=True)
-	fullMeta_filtered_path = os.path.join(dir, f'fullMeta_{args.dataset}.csv')
-	merged_df.to_csv(fullMeta_filtered_path, index=False)
-
+	
+	
 	# print number of missing both titles and descriptions
 	num_missing_both = merged_df['title'].isnull() & merged_df['description'].isnull()
 	print(f"Number of missing both titles and descriptions: {num_missing_both.sum()}")
@@ -132,10 +135,12 @@ if __name__ == '__main__':
 	# fill null titles or descriptions with empty string
 	merged_df['title'] = merged_df['title'].fillna('')
 	merged_df['description'] = merged_df['description'].fillna('')
-
+	merged_df['profile'] = prf_text
+	fullMeta_filtered_path = os.path.join(dir, f'fullMeta_{args.dataset}.csv')
+	merged_df.to_csv(fullMeta_filtered_path, index=False)
 
 	# create new column with combine title and description
-	merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['description']
+	merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['profile']
 
 	# encode text_feat to embeddings and save as .npy
 	
@@ -145,62 +150,10 @@ if __name__ == '__main__':
 	np.save(text_feat_npy_path, text_embeddings)
 
 	# save prf embeddings as .npy in the order of itemID
-	prf_text = []
-	for idx in prf_items:
-		item_profile = prf[idx]['profile']
-		prf_text.append(item_profile)
+	
 	prf_text_embeddings = bertmodel.encode(prf_text, show_progress_bar=True)
 	prf_text_embeddings = np.array(prf_text_embeddings)
 	prf_text_feat_npy_path = os.path.join(dir, f'profile_text_feat.npy')
 	np.save(prf_text_feat_npy_path, prf_text_embeddings)
-	
-
-	# # =========================
-	# # Preparing for users
-	# # =========================
-	# # 1. get user interactions in metaDF in x_label==0
-	# user_interactions = {}
-	# for idx, row in tqdm(metaDF.iterrows(), total=metaDF.shape[0]):
-	# 	uid = row['userID']
-	# 	iid = row['itemID']
-	# 	label = row['x_label']
-	# 	if label != 0:
-	# 		continue
-	# 	if uid not in user_interactions:
-	# 		user_interactions[uid] = []
-	# 	user_interactions[uid].append(iid)
-
-	# # # 2. for each user, get closest user by item overlap
-	# # user_top1_similar = {}
-	# # for uid in tqdm(user_interactions.keys()):
-	# # 	u_items = user_interactions[uid]
-	# # 	max_overlap = -1
-	# # 	top1_uid = -1
-	# # 	for other_uid in user_interactions.keys():
-	# # 		if other_uid == uid:
-	# # 			continue
-	# # 		other_u_items = user_interactions[other_uid]
-	# # 		overlap = overlap_items(u_items, other_u_items)
-	# # 		if overlap > max_overlap:
-	# # 			max_overlap = overlap
-	# # 			top1_uid = other_uid
-	# # 	user_top1_similar[uid] = (top1_uid, max_overlap)
-
-
-	# # =========================
-	# # Profiling for user
-	# # =========================
-	# with open("src/prompts.yaml", "r") as f:
-	# 	all_prompts = yaml.safe_load(f)
-	# cprompt = all_prompts[args.dataset]['user']
-	# print(cprompt)
-	# user_profiles = {}
-	# # for uid in tqdm(user_interactions.keys()):
-	# # 	u_items = user_interactions[uid]
-	# # 	# list all interacted items, title: item_title and description: item_profile.
-	# # 	user_items = []
-
-		
-		
 
 
