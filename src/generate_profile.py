@@ -207,7 +207,13 @@ if __name__ == '__main__':
 	users = listUser[args.shard::args.num_shards]
 
 	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}_{args.shard}.json'
+	if os.path.exists(user_profile_path):
+		with open(user_profile_path, 'r', encoding='utf-8') as f:
+			user_profiles = json.load(f)
+		print(f"Loaded existing user profiles from {user_profile_path}, current size: {len(user_profiles)}")
 	for uid in tqdm(users):
+		if str(uid) in user_profiles:
+			continue
 		u_items = user_interactions[uid]
 		itemInfo = ""
 		for item in u_items[-5:]:
