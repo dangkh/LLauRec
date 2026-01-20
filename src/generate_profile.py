@@ -226,9 +226,9 @@ if __name__ == '__main__':
 		# candidateInfo = ""
 		# for c in listC:
 		# 	candidateInfo += itemDesc[c]
-		user_profiles[uid] = { "summary": summary }
+		user_profiles[str(uid)] = { "summary": summary }
 
-		if (len(user_profiles) + 1) % 100 == 0:
+		if (len(user_profiles) + 1) % 50 == 0:
 			with open(user_profile_path, 'w', encoding='utf-8') as f:
 				json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 	
