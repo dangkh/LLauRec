@@ -18,7 +18,7 @@ book:
           "summarization": "A summarization of what types of books this user is likely to enjoy" (if you are unable to summarize it, please set this value to "None")
           "reasoning": "briefly explain your reasoning for the summarization"
       }}
-      2. Please ensure that the "summarization" is no longer than 200 words.
+      2. Please ensure that the "summarization" is no longer than 150 words.
       3. The "reasoning" has no word limits.
       4. Do not provided any other text outside the JSON string.
   item: |

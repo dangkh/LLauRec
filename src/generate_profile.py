@@ -67,12 +67,12 @@ def generate_summary(model, tokenizer, system_prompt, content):
 
 	output = model.generate(
 		**inputs,
-		max_new_tokens = 1000, # Increase for longer outputs!
+		max_new_tokens = 500, # Increase for longer outputs!
 		temperature = 0.7, top_p = 0.8, top_k = 20, # For non thinking
 		do_sample = False
 	)
 	generated_tokens = output[0][inputs["input_ids"].shape[-1]:]
-	return json.loads(tokenizer.decode(generated_tokens, skip_special_tokens=True).strip())
+	return tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
@@ -174,10 +174,11 @@ if __name__ == '__main__':
 
 	model, tokenizer = FastLanguageModel.from_pretrained(
 		model_name = "unsloth/Qwen3-4B-Instruct-2507",
-		max_seq_length = 2048, # Choose any for long context!
+		max_seq_length = 4096, # Choose any for long context!
 		load_in_4bit = True,  # 4 bit quantization to reduce memory
 		load_in_8bit = False, # [NEW!] A bit more accurate, uses 2x memory
 		full_finetuning = False, # [NEW!] We have full finetuning now!
+		device_map = "balanced",
 		# token = "hf_...", # use one if using gated models
 	)
 
@@ -197,12 +198,12 @@ if __name__ == '__main__':
 	)
 
 
-	user_profiles = []
+	user_profiles = {}
 	checkarray = []
 	for uid in tqdm(user_interactions.keys()):
 		u_items = user_interactions[uid]
 		itemInfo = ""
-		for item in u_items:
+		for item in u_items[-5:]:
 			itemInfo += itemDesc[item]
 		
 		summary = generate_summary(model, tokenizer, sys_prompt, itemInfo)
@@ -218,7 +219,7 @@ if __name__ == '__main__':
 		# candidateInfo = ""
 		# for c in listC:
 		# 	candidateInfo += itemDesc[c]
-		user_profiles.append(summary)
+		user_profiles[uid] = { "summary": summary }
 	
 	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}.json'
 	with open(user_profile_path, 'w', encoding='utf-8') as f:
