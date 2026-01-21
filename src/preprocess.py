@@ -193,7 +193,7 @@ if __name__ == '__main__':
 			candidateInfo += tmp
 
 		userprompt = tun_prompt.format(itemInfo, candidateInfo)
-		answer = f"The user is most likely to interact with the item with Title: {itemDesc[ground_truth][0]}"
+		answer = f"User may like: {itemDesc[ground_truth][0]}"
 		dataset.append({
 			"userprompt": userprompt,
 			"systemprompt": sys_prompt,

@@ -77,7 +77,7 @@ if __name__ == '__main__':
 	with open("src/prompts.yaml", "r") as f:
 		all_prompts = yaml.safe_load(f)
 	tun_prompt = all_prompts['tuning']
-	sys_prompt = all_prompts[args.dataset]['user']
+	sys_prompt = all_prompts[args.dataset]['sys']
 
 	dataPath = f"./data/{args.dataset}/tuningData.jsonl"
 	dataset = load_dataset("json", data_files=dataPath)
@@ -124,14 +124,14 @@ if __name__ == '__main__':
 			local_rank= local_rank,
 		),
 	)
-	trainer = train_on_responses_only(
-		trainer,
-		instruction_part = "<|im_start|>user\n",
-		response_part = "<|im_start|>assistant\n",
-	)
+	# trainer = train_on_responses_only(
+	# 	trainer,
+	# 	instruction_part = "<|im_start|>user\n",
+	# 	response_part = "<|im_start|>assistant\n",
+	# )
 	tokenizer.decode(trainer.train_dataset[100]["input_ids"])
 	tokenizer.decode([tokenizer.pad_token_id if x == -100 else x for x in trainer.train_dataset[100]["labels"]]).replace(tokenizer.pad_token, " ")				
 
 	trainer_stats = trainer.train()
-	model.save_pretrained(f"qwen4B_it_model_for{args.dataset}")  # Local saving
-	tokenizer.save_pretrained(f"qwen4B_it_model_for{args.dataset}")
+	model.save_pretrained(f"qwen4B_it_model_{args.dataset}")  # Local saving
+	tokenizer.save_pretrained(f"qwen4B_it_model_{args.dataset}")

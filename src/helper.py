@@ -22,6 +22,7 @@ def merge_json_files(path1, path2, output_path):
 
 	# print total number of entries
 	print(f"Total number of entries in merged file: {len(merged)}")
+	return merged
 
 def get_profile_text(files):
 	counter = 0
@@ -35,6 +36,7 @@ def get_profile_text(files):
 			print(f"Error parsing JSON for key: {ii}")
 			print(f"Value: {files[str(ii)]}")
 	print(f"Total successfully parsed profiles: {counter}")
+	return profile
 
 def get_profile_embeddings(inputs, save=False, path=None):
 	embeddings = np.array(bertmodel.encode(inputs, show_progress_bar=True))	
