@@ -135,7 +135,7 @@ if __name__ == '__main__':
 	] # More models at https://huggingface.co/unsloth
 
 	model, tokenizer = FastLanguageModel.from_pretrained(
-		model_name = "unsloth/Qwen3-4B-Instruct-2507",
+		model_name = f"./qwen4B_it_model",
 		max_seq_length = 4096, # Choose any for long context!
 		load_in_4bit = True,  # 4 bit quantization to reduce memory
 		load_in_8bit = False, # [NEW!] A bit more accurate, uses 2x memory
@@ -144,20 +144,20 @@ if __name__ == '__main__':
 		# token = "hf_...", # use one if using gated models
 	)
 
-	model = FastLanguageModel.get_peft_model(
-		model,
-		r = 32, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
-		target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-						"gate_proj", "up_proj", "down_proj",],
-		lora_alpha = 32,
-		lora_dropout = 0, # Supports any, but = 0 is optimized
-		bias = "none",    # Supports any, but = "none" is optimized
-		# [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
-		use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
-		random_state = 3407,
-		use_rslora = False,  # We support rank stabilized LoRA
-		loftq_config = None, # And LoftQ
-	)
+	# model = FastLanguageModel.get_peft_model(
+	# 	model,
+	# 	r = 32, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+	# 	target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+	# 					"gate_proj", "up_proj", "down_proj",],
+	# 	lora_alpha = 32,
+	# 	lora_dropout = 0, # Supports any, but = 0 is optimized
+	# 	bias = "none",    # Supports any, but = "none" is optimized
+	# 	# [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
+	# 	use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
+	# 	random_state = 3407,
+	# 	use_rslora = False,  # We support rank stabilized LoRA
+	# 	loftq_config = None, # And LoftQ
+	# )
 
 
 	user_profiles = {}
