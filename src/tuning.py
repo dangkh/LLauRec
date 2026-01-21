@@ -85,8 +85,7 @@ if __name__ == '__main__':
 	for sample in dataset['train']:
 		tmp = {
 			"conversations": [
-				{"role": "system", "content": sys_prompt},
-				{"role": "user", "content": sample["userprompt"]},
+				{"role": "user", "content": sys_prompt + sample["userprompt"]},
 				{"role": "assistant", "content": sample["answer"]},
 			]
 		}
@@ -124,11 +123,11 @@ if __name__ == '__main__':
 			local_rank= local_rank,
 		),
 	)
-	# trainer = train_on_responses_only(
-	# 	trainer,
-	# 	instruction_part = "<|im_start|>user\n",
-	# 	response_part = "<|im_start|>assistant\n",
-	# )
+	trainer = train_on_responses_only(
+		trainer,
+		instruction_part = "<|im_start|>user\n",
+		response_part = "<|im_start|>assistant\n",
+	)
 	tokenizer.decode(trainer.train_dataset[100]["input_ids"])
 	tokenizer.decode([tokenizer.pad_token_id if x == -100 else x for x in trainer.train_dataset[100]["labels"]]).replace(tokenizer.pad_token, " ")				
 
