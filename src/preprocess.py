@@ -200,7 +200,6 @@ if __name__ == '__main__':
 			"answer": answer
 		})
 
-		print(dataset[-1])
 	
 	dataset = Dataset.from_list(dataset)
 	dataset.to_json(f"./data/{args.dataset}/tuningData.jsonl")
