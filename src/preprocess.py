@@ -12,9 +12,8 @@ import pickle
 import numpy as np
 import yaml
 import gzip
-from sentence_transformers import SentenceTransformer
-bertmodel = SentenceTransformer('all-MiniLM-L6-v2')
-
+from datasets import Dataset
+from helper import build_item_item_knn, get_itemDesc, get_profile_embeddings, getUser_Interaction
 
 def overlap_items(list1, list2):
 	return len(set(list1) & set(list2))
@@ -22,6 +21,7 @@ def overlap_items(list1, list2):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
+	parser.add_argument("--item_profile", type=bool, default=False, help='whether to use item profile or not')
 	args, _ = parser.parse_known_args()
 
 	dir = f'./data/{args.dataset}/'
@@ -142,18 +142,67 @@ if __name__ == '__main__':
 	# create new column with combine title and description
 	merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['profile']
 
-	# encode text_feat to embeddings and save as .npy
+	if args.item_profile:
+		# save prf embeddings as .npy in the order of itemID
+		text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat_profile.npy'))
+	else:	
+		# encode text_feat to embeddings and save as .npy
+		text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat_original.npy'))
 	
-	text_embeddings = bertmodel.encode(merged_df['text_feat'].tolist(), show_progress_bar=True)
-	text_embeddings = np.array(text_embeddings)
-	text_feat_npy_path = os.path.join(dir, f'text_feat_original.npy')
-	np.save(text_feat_npy_path, text_embeddings)
+	top_k = 10
+	item_kitem = build_item_item_knn(text_embeddings, top_k=top_k)
+	item_item_path = f'./data/{args.dataset}/item_top{top_k}item.npy'
+	np.save(item_item_path, item_kitem)
 
-	# save prf embeddings as .npy in the order of itemID
+	user_interactions = getUser_Interaction(interDF)
+	itemDesc = get_itemDesc(merged_df, merge=False)
+	checkarray = []
+	listUser = list(user_interactions.keys())
+
+	with open("src/prompts.yaml", "r") as f:
+		all_prompts = yaml.safe_load(f)
+	tun_prompt = all_prompts['tuning']
+	sys_prompt = all_prompts[args.dataset]['user']
+
+	tuningLLM_name = 'QwenTuning'
+	dataset = []
+	for uid in tqdm(listUser):
+		u_items = user_interactions[uid]
+		selected = u_items[-10:] 
+		ground_truth = selected[-1]
+		interacted = selected[:-1]
+		itemInfo = ""
+		for item in interacted:
+			title, description = itemDesc[item]
+			tmp = f"Title: {title}\nDescription: {description}\n\n"
+			itemInfo += tmp
+
+		candidates = item_kitem[ground_truth]
+		listC = []
+		for c in candidates:
+			if c in u_items:
+				continue
+			listC.append(c)
+		random.shuffle(listC)
+		listC = listC[:3]
+		checkarray.append(len(listC))
+		candidateInfo = ""
+		for c in listC:
+			title, description = itemDesc[c]
+			tmp = f"Title: {title}\nDescription: {description}\n\n"
+			candidateInfo += tmp
+
+		userprompt = tun_prompt.format(itemInfo, candidateInfo)
+		answer = f"The user is most likely to interact with the item with Title: {itemDesc[ground_truth][0]}"
+		dataset.append({
+			"userprompt": userprompt,
+			"systemprompt": sys_prompt,
+			"answer": answer
+		})
+
+		print(dataset[-1])
 	
-	prf_text_embeddings = bertmodel.encode(prf_text, show_progress_bar=True)
-	prf_text_embeddings = np.array(prf_text_embeddings)
-	prf_text_feat_npy_path = os.path.join(dir, f'profile_text_feat.npy')
-	np.save(prf_text_feat_npy_path, prf_text_embeddings)
-
-
+	dataset = Dataset.from_list(dataset)
+	dataset.to_json(f"./data/{args.dataset}/tuningData.jsonl")
+	# stat for candidate
+	print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))	

@@ -10,6 +10,7 @@ import random
 from unsloth import FastLanguageModel
 import torch
 import json
+from helper import build_item_item_knn, get_itemDesc, getUser_Interaction
 
 # from trl import SFTTrainer
 # from transformers import TrainingArguments
@@ -22,30 +23,6 @@ import json
 
 # os.environ["TOKENIZERS_PARALLELISM"] = "false"  # tránh num_proc=68
 # device_map = {"": local_rank}
-
-def build_item_item_knn(itemDesc, top_k=50, metric="cosine", return_scores=False):
-    """
-    itemDesc: np.ndarray shape (num_items, dim) hoặc list-of-embeddings
-    top_k: số hàng xóm gần nhất (không tính chính nó)
-    metric: "cosine" (khuyến nghị) hoặc "euclidean"
-    return_scores: nếu True trả thêm độ tương đồng/ khoảng cách
-    """
-    X = np.asarray(itemDesc, dtype=np.float32)
-    n = X.shape[0]
-    if top_k >= n:
-        raise ValueError(f"top_k must be < num_items (top_k={top_k}, num_items={n})")
-
-    # Với cosine: sklearn trả về "cosine distance" = 1 - cosine_similarity
-    nn = NearestNeighbors(n_neighbors=top_k + 1, metric=metric, algorithm="auto")
-    nn.fit(X)
-
-    _, indices = nn.kneighbors(X, return_distance=True)  # (n, top_k+1)
-
-    # loại bỏ chính nó (thường ở vị trí 0)
-    item_item = indices[:, 1:top_k+1].astype(np.int32)
-
-    if not return_scores:
-        return item_item
 
 
 def generate_summary(model, tokenizer, system_prompt, content):
@@ -103,16 +80,7 @@ if __name__ == '__main__':
 	# =========================
 	# 1. get user interactions in interDF in x_label==0
 
-	user_interactions = {}
-	for idx, row in tqdm(interDF.iterrows(), total=interDF.shape[0]):
-		uid = row['userID']
-		iid = row['itemID']
-		label = row['x_label']
-		if label != 0:
-			continue
-		if uid not in user_interactions:
-			user_interactions[uid] = []
-		user_interactions[uid].append(int(iid))
+	user_interactions = getUser_Interaction(interDF)
 
 	# # # 2. for each user, get closest user by item overlap
 	# # user_top1_similar = {}
@@ -137,15 +105,9 @@ if __name__ == '__main__':
 	with open("src/prompts.yaml", "r") as f:
 		all_prompts = yaml.safe_load(f)
 	sys_prompt = all_prompts[args.dataset]['user']
-	print(sys_prompt)
 
 
-	itemDesc = []
-	for idx, row in tqdm(metaDF.iterrows(), total=metaDF.shape[0]):
-		iid = row['iid']
-		title = row['title']
-		description = row['profile']
-		itemDesc.append(f"Title: {title}\nDescription: {description}\n\n")
+	itemDesc = get_itemDesc(metaDF)
 
 	# for each item, find top-k similar items
 	top_k = 10
@@ -154,10 +116,7 @@ if __name__ == '__main__':
 		print(f"{item_item_path} exists, skip building item-item knn.")
 		item_kitem = np.load(item_item_path)
 	else:
-		embed_path = f'./data/{args.dataset}/text_feat_original.npy'
-		item_embeddings = np.load(embed_path)
-		item_kitem = build_item_item_knn(item_embeddings, top_k=top_k)
-		np.save(item_item_path, item_kitem)
+		raise ValueError(f"{item_item_path} does not exist, please run preprocess.py to build it.")
 
 
 	fourbit_models = [
@@ -216,30 +175,21 @@ if __name__ == '__main__':
 			continue
 		u_items = user_interactions[uid]
 		itemInfo = ""
-		for item in u_items[-5:]:
+		for item in u_items[-10:]:
 			itemInfo += itemDesc[item]
 		
 		summary = generate_summary(model, tokenizer, sys_prompt, itemInfo)
-
-		# candidates = item_kitem[u_items[-1]]
-		# listC = []
-		# for c in candidates:
-		# 	if c not in u_items:
-		# 		listC.append(c)
-		# random.shuffle(listC)
-		# listC = listC[:3]
-		# checkarray.append(len(listC))
-		# candidateInfo = ""
-		# for c in listC:
-		# 	candidateInfo += itemDesc[c]
 		user_profiles[str(uid)] = { "summary": summary }
 
 		if (len(user_profiles) + 1) % 50 == 0:
 			with open(user_profile_path, 'w', encoding='utf-8') as f:
 				json.dump(user_profiles, f, ensure_ascii=False, indent=4)
+
+	with open(user_profile_path, 'w', encoding='utf-8') as f:
+		json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 	
 	# stat for candidate
-	print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))
-
+	# print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))
+	
 
 
