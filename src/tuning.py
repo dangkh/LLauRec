@@ -133,6 +133,5 @@ if __name__ == '__main__':
 	tokenizer.decode([tokenizer.pad_token_id if x == -100 else x for x in trainer.train_dataset[100]["labels"]]).replace(tokenizer.pad_token, " ")				
 
 	trainer_stats = trainer.train()
-	model.save_pretrained("qwen4B_it_model")  # Local saving
-	tokenizer.save_pretrained("qwen4B_it_model")
-
+	model.save_pretrained(f"qwen4B_it_model_for{args.dataset}")  # Local saving
+	tokenizer.save_pretrained(f"qwen4B_it_model_for{args.dataset}")

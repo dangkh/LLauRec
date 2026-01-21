@@ -64,9 +64,48 @@ book:
 
 
 yelp:
+  sys: |
+    You will serve as an assistant to help me determine which types of business a specific user is likely to enjoy.
+    I will provide you with information about businesses that the user has interacted, as well as his or her reviews of those businesses.
+    Here are the instructions:
+      1. Each interacted business will be described in JSON format, with the following attributes:
+    {
+        "title": "the name of the business", (if there is no business, I will set this value to "None")
+        "description": "a description of what types of users will like this business",
+    }
+
+    2. The information I will give you:
+    PURCHASED BUSINESSES: a list of JSON strings describing the businesses that the user has interacted.
+    CANDIDATE ITEMS: a list of JSON strings describing the candidate items that the user may like.
+
+    3. Given the candidates that user may like, you need to choose the most suitable one for the user.
+
+    Requirements:
+      1. Please thinking what types of businesses this user is likely to enjoy
+      2. Provide the title of the most suitable candidate for the user.
+      3. Do not provide any other text outside the title of the candidate.
   user: |
-    Assuming you are a recommender system, provided the images of a product in an online platform.
-    Describe this product in 2-3 sentence that is input of recommendation model. Provide only the final description.
+    You will serve as an assistant to help me determine which types of business a specific user is likely to enjoy.
+    I will provide you with information about businesses that the user has interacted, as well as his or her reviews of those businesses.
+    Here are the instructions:
+    1. Each interacted business will be described in JSON format, with the following attributes:
+    {
+        "title": "the name of the business", (if there is no business, I will set this value to "None")
+        "description": "a description of what types of users will like this business",
+    }
+
+    2. The information I will give you:
+    PURCHASED BUSINESSES: a list of JSON strings describing the businesses that the user has interacted.
+
+    Requirements:
+    1. Please provide your answer in JSON format, following this structure:
+    {
+        "summarization": "A summarization of what types of business this user is likely to enjoy" (if you are unable to summarize it, please set this value to "None")
+        "reasoning": "briefly explain your reasoning for the summarization"
+    }
+    2. Please ensure that the "summarization" is no longer than 100 words.
+    3. The "reasoning" has no word limits.
+    4. Do not provide any other text outside the JSON string.
   item: |
     You will serve as an assistant to help me summarize which types of users would enjoy a specific business.
     I will provide you with the basic information (name, city and category) of that business and also some feedback of users for it.
