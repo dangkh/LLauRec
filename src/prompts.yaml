@@ -102,8 +102,8 @@ yelp:
 
 
 tuning: |
-  User interacted items are: 
+  User purchased items are: 
   {}
 
-  The following candidates are:
+  The list candidates are:
   {}
