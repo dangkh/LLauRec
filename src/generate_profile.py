@@ -12,18 +12,6 @@ import torch
 import json
 from helper import build_item_item_knn, get_itemDesc, getUser_Interaction
 
-# from trl import SFTTrainer
-# from transformers import TrainingArguments
-# from unsloth import is_bfloat16_supported
-# from datasets import Dataset
-# from datasets import load_dataset
-# import torch
-# local_rank = int(os.environ.get("LOCAL_RANK", 0))
-# torch.cuda.set_device(local_rank)
-
-# os.environ["TOKENIZERS_PARALLELISM"] = "false"  # tránh num_proc=68
-# device_map = {"": local_rank}
-
 
 def generate_summary(model, tokenizer, system_prompt, content):
 	content = content + "\n NOW, provide the JSON format."

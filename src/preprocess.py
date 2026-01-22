@@ -193,7 +193,7 @@ if __name__ == '__main__':
 			candidateInfo += tmp
 
 		userprompt = tun_prompt.format(itemInfo, candidateInfo)
-		answer = f"User may like: {itemDesc[ground_truth][1]}"
+		answer = f"{itemDesc[ground_truth][1]}"
 		dataset.append({
 			"userprompt": userprompt,
 			"systemprompt": sys_prompt,
