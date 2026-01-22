@@ -23,6 +23,7 @@ def generate_summary(model, tokenizer, system_prompt, content):
 		messages,
 		tokenize = False,
 		add_generation_prompt = True, # Must add for generation
+		enable_thinking = True
 	)
 	inputs = tokenizer(
 		input_text,
@@ -32,8 +33,8 @@ def generate_summary(model, tokenizer, system_prompt, content):
 
 	output = model.generate(
 		**inputs,
-		max_new_tokens = 500, # Increase for longer outputs!
-		temperature = 0.7, top_p = 0.8, top_k = 20, # For non thinking
+		max_new_tokens = 1024, # Increase for longer outputs!
+		temperature = 0.5, top_p = 0.95, top_k = 20, # For non thinking
 		do_sample = False
 	)
 	generated_tokens = output[0][inputs["input_ids"].shape[-1]:]
