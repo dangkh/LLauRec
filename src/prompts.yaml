@@ -13,11 +13,9 @@ book:
       PURCHASED ITEMS: a list of JSON strings describing the items that the user has purchased.
       CANDIDATE ITEMS: a list of JSON strings describing the candidate items that the user may buy next.
 
-    NOW Given the CANDIDATE that user may like, you need to choose the most suitable one for the user.
-
     Requirements:
-      1. Based on the PURCHASED ITEMS, please think "A summarization of what types of books this user is likely to enjoy"
-      2. Provide the title of the most suitable candidate item for the user that they may choose to buy next.
+      1. Based on the PURCHASED ITEMS, summarize what types of books this user is likely to enjoy
+      2. Based on the summarization of user favorite, provide the most suitable candidate item for the user that they may choose to buy next.
   user: |
     You will serve as an assistant to help me determine which types of books a specific user is likely to enjoy.
     I will provide you with information about books that the user has purchased.
@@ -30,8 +28,6 @@ book:
 
       2. The information I will give you:
       PURCHASED ITEMS: a list of JSON strings describing the items that the user has purchased.
-
-    NOW MUST Provide the information about the user acording to the following Requirements:
 
     Requirements:
       1. Please provide information of user in JSON format, following this structure:
