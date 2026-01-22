@@ -96,4 +96,5 @@ def get_itemDesc(metaDF, merge=True):
 
 
 if __name__ == "__main__":
-	pass
+	merge_json_files("./data/book/tuning/usr0.json", "./data/book/tuning/usr1.json", "./data/book/tuning/usr.json")
+	

@@ -86,6 +86,9 @@ if __name__ == '__main__':
 		item_profile = prf[idx]['profile']
 		prf_text.append(item_profile)
 
+	with open("./data/book/tuning/usr.json", 'r', encoding='utf-8') as f:
+		sampleUser = json.load(f)
+
 	# random a single sample of item profiles
 	randomID = random.choice(list(prf_items))
 	print("An item profile contains:", prf[randomID].keys(), "sample item:", prf[randomID])
@@ -162,44 +165,53 @@ if __name__ == '__main__':
 	with open("src/prompts.yaml", "r") as f:
 		all_prompts = yaml.safe_load(f)
 	tun_prompt = all_prompts['tuning']
-	sys_prompt = all_prompts[args.dataset]['sys']
+	sys_prompt1 = all_prompts[args.dataset]['sys']
+	sys_prompt2 = all_prompts[args.dataset]['user']
 
 	tuningLLM_name = 'QwenTuning'
 	dataset = []
 	for uid in tqdm(listUser):
 		u_items = user_interactions[uid]
 		selected = u_items[-10:] 
-		ground_truth = selected[-1]
-		interacted = selected[:-1]
-		itemInfo = ""
-		for item in interacted:
-			title, description = itemDesc[item]
-			tmp = f"Title: {title}\nDescription: {description}\n\n"
-			itemInfo += tmp
+		if len(dataset) % 2 == 0:
+			ground_truth = selected[-1]
+			interacted = selected[:-1]
+			itemInfo = ""
+			for item in interacted:
+				title, description = itemDesc[item]
+				tmp = f"Title: {title}\nDescription: {description}\n\n"
+				itemInfo += tmp
 
-		candidates = item_kitem[ground_truth]
-		listC = []
-		for c in candidates:
-			if c in u_items:
-				continue
-			listC.append(c)
-		random.shuffle(listC)
-		listC = listC[:3]
-		checkarray.append(len(listC))
-		candidateInfo = ""
-		for c in listC:
-			title, description = itemDesc[c]
-			tmp = f"Title: {title}\nDescription: {description}\n\n"
-			candidateInfo += tmp
+			candidates = item_kitem[ground_truth]
+			listC = []
+			for c in candidates:
+				if c in u_items:
+					continue
+				listC.append(c)
+			random.shuffle(listC)
+			listC = listC[:3]
+			checkarray.append(len(listC))
+			candidateInfo = ""
+			for c in listC:
+				title, description = itemDesc[c]
+				tmp = f"Title: {title}\nDescription: {description}\n\n"
+				candidateInfo += tmp
 
-		userprompt = tun_prompt.format(itemInfo, candidateInfo)
-		# answer = f"{itemDesc[ground_truth][1]}"
-		answer = f'''
-		Based on the summarization of what type of book this user like. 
-		Based on the candidates item, the book this user will choose in the candidate list is: {itemDesc[ground_truth][1]}
-		'''
+			userprompt = tun_prompt.format(itemInfo, candidateInfo)
+			answer = f"{itemDesc[ground_truth][1]}"
+			sys_prompt = sys_prompt1
+		else:
+			itemInfo = "The user has purchased: \n"
+			for item in selected:
+				title, description = itemDesc[item]
+				tmp = f"Title: {title}\nDescription: {description}\n\n"
+				itemInfo += tmp
+			sys_prompt = sys_prompt2
+			answer = sampleUser[str(uid)]
+
+
 		dataset.append({
-			"userprompt": userprompt,
+			"userprompt": itemInfo,
 			"systemprompt": sys_prompt,
 			"answer": answer
 		})

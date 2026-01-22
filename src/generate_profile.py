@@ -14,12 +14,10 @@ from helper import build_item_item_knn, get_itemDesc, getUser_Interaction
 
 
 def generate_summary(model, tokenizer, system_prompt, content):
-	content = content + "\n NOW, Your task is: based on the books that user has bought, providec a summarization of what types of books this user likes."
 	messages = [
 		{"role": "system", "content": system_prompt},
 		{"role" : "user", "content" : content}
 	]
-	print(messages)
 	input_text = tokenizer.apply_chat_template(
 		messages,
 		tokenize = False,
@@ -44,6 +42,7 @@ def generate_summary(model, tokenizer, system_prompt, content):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
+	parser.add_argument('--tuning',  '-t', default=False, help='load tuned model or pretrain')
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
 	parser.add_argument("--shard", type=int, default=0)
 	parser.add_argument("--num_shards", type=int, default=1)
@@ -68,26 +67,8 @@ if __name__ == '__main__':
 	# =========================
 	# Preparing for users
 	# =========================
-	# 1. get user interactions in interDF in x_label==0
 
 	user_interactions = getUser_Interaction(interDF)
-
-	# # # 2. for each user, get closest user by item overlap
-	# # user_top1_similar = {}
-	# # for uid in tqdm(user_interactions.keys()):
-	# # 	u_items = user_interactions[uid]
-	# # 	max_overlap = -1
-	# # 	top1_uid = -1
-	# # 	for other_uid in user_interactions.keys():
-	# # 		if other_uid == uid:
-	# # 			continue
-	# # 		other_u_items = user_interactions[other_uid]
-	# # 		overlap = overlap_items(u_items, other_u_items)
-	# # 		if overlap > max_overlap:
-	# # 			max_overlap = overlap
-	# # 			top1_uid = other_uid
-	# # 	user_top1_similar[uid] = (top1_uid, max_overlap)
-
 
 	# =========================
 	# Profiling for user
@@ -124,8 +105,12 @@ if __name__ == '__main__':
 		"unsloth/orpheus-3b-0.1-ft-unsloth-bnb-4bit" # [NEW] We support TTS models!
 	] # More models at https://huggingface.co/unsloth
 
+	selected_model = "unsloth/Qwen3-14B"
+	if args.tuning:
+		selected_model = f"./qwen4B_it_model_{args.dataset}"
+
 	model, tokenizer = FastLanguageModel.from_pretrained(
-		model_name = f"./qwen4B_it_model_{args.dataset}",
+		model_name = selected_model,
 		max_seq_length = 4096, # Choose any for long context!
 		load_in_4bit = True,  # 4 bit quantization to reduce memory
 		load_in_8bit = False, # [NEW!] A bit more accurate, uses 2x memory
@@ -133,21 +118,6 @@ if __name__ == '__main__':
 		device_map = "balanced",
 		# token = "hf_...", # use one if using gated models
 	)
-
-	# model = FastLanguageModel.get_peft_model(
-	# 	model,
-	# 	r = 32, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
-	# 	target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-	# 					"gate_proj", "up_proj", "down_proj",],
-	# 	lora_alpha = 32,
-	# 	lora_dropout = 0, # Supports any, but = 0 is optimized
-	# 	bias = "none",    # Supports any, but = "none" is optimized
-	# 	# [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
-	# 	use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
-	# 	random_state = 3407,
-	# 	use_rslora = False,  # We support rank stabilized LoRA
-	# 	loftq_config = None, # And LoftQ
-	# )
 
 
 	user_profiles = {}
@@ -165,21 +135,19 @@ if __name__ == '__main__':
 			continue
 		u_items = user_interactions[uid]
 		random.shuffle(u_items)
-		itemInfo = ""
+		itemInfo = "The user has purchased: \n"
 		for item in u_items[-10:]:
 			itemInfo += itemDesc[item]
 		
 		summary = generate_summary(model, tokenizer, sys_prompt, itemInfo)
-		print(summary)
-		break
 		user_profiles[str(uid)] = { "summary": summary }
 
 		if (len(user_profiles) + 1) % 50 == 0:
 			with open(user_profile_path, 'w', encoding='utf-8') as f:
 				json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 
-	# with open(user_profile_path, 'w', encoding='utf-8') as f:
-	# 	json.dump(user_profiles, f, ensure_ascii=False, indent=4)
+	with open(user_profile_path, 'w', encoding='utf-8') as f:
+		json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 	
 	# stat for candidate
 	# print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))
