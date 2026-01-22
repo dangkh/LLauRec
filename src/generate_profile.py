@@ -26,10 +26,10 @@ from helper import build_item_item_knn, get_itemDesc, getUser_Interaction
 
 
 def generate_summary(model, tokenizer, system_prompt, content):
+	content = content + "\n NOW, provide the JSON format."
 	messages = [
 		{"role": "system", "content": system_prompt},
-		{"role" : "user", 
-		"content" : content}
+		{"role" : "user", "content" : content}
 	]
 	input_text = tokenizer.apply_chat_template(
 		messages,

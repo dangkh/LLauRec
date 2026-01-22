@@ -11,7 +11,7 @@ book:
 
       2. The information I will give you:
       PURCHASED ITEMS: a list of JSON strings describing the items that the user has purchased.
-      CANDIDATE ITEMS: a list of JSON strings describing the candidate items that the user may like.
+      CANDIDATE ITEMS: a list of JSON strings describing the candidate items that the user may buy next.
 
     NOW Given the CANDIDATE that user may like, you need to choose the most suitable one for the user.
 
@@ -147,3 +147,5 @@ tuning: |
 
   The list candidates are:
   {}
+
+  Now, provide the next item that the user is most likely to buy next.
