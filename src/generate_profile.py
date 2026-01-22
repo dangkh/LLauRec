@@ -14,12 +14,11 @@ from helper import build_item_item_knn, get_itemDesc, getUser_Interaction
 
 
 def generate_summary(model, tokenizer, system_prompt, content):
-	content = content + "\n NOW, Your task is: based on the books that user has bought, providec a summarization of what types of books this user likes."
+	content = content + "\n NOW, provide the JSON format."
 	messages = [
 		{"role": "system", "content": system_prompt},
 		{"role" : "user", "content" : content}
 	]
-	print(messages)
 	input_text = tokenizer.apply_chat_template(
 		messages,
 		tokenize = False,
@@ -164,22 +163,19 @@ if __name__ == '__main__':
 		if str(uid) in user_profiles:
 			continue
 		u_items = user_interactions[uid]
-		random.shuffle(u_items)
 		itemInfo = ""
 		for item in u_items[-10:]:
 			itemInfo += itemDesc[item]
 		
 		summary = generate_summary(model, tokenizer, sys_prompt, itemInfo)
-		print(summary)
-		break
 		user_profiles[str(uid)] = { "summary": summary }
 
 		if (len(user_profiles) + 1) % 50 == 0:
 			with open(user_profile_path, 'w', encoding='utf-8') as f:
 				json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 
-	# with open(user_profile_path, 'w', encoding='utf-8') as f:
-	# 	json.dump(user_profiles, f, ensure_ascii=False, indent=4)
+	with open(user_profile_path, 'w', encoding='utf-8') as f:
+		json.dump(user_profiles, f, ensure_ascii=False, indent=4)
 	
 	# stat for candidate
 	# print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))
