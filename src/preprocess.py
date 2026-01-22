@@ -193,7 +193,11 @@ if __name__ == '__main__':
 			candidateInfo += tmp
 
 		userprompt = tun_prompt.format(itemInfo, candidateInfo)
-		answer = f"{itemDesc[ground_truth][1]}"
+		# answer = f"{itemDesc[ground_truth][1]}"
+		answer = f'''
+		Based on the summarization of what type of book this user like. 
+		Based on the candidates item, the book this user will choose in the candidate list is: {itemDesc[ground_truth][1]}
+		'''
 		dataset.append({
 			"userprompt": userprompt,
 			"systemprompt": sys_prompt,
