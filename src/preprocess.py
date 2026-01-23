@@ -34,7 +34,11 @@ if __name__ == '__main__':
 			file_path = f'./data/{args.dataset}/tun_user_profile.json'
 		else:
 			file_path = f'./data/{args.dataset}/sample_user_profile.json'
-		prf_text = get_profile_text(file_path)
+		
+		with open(file_path, 'r', encoding='utf-8') as jsonfile:
+			jsonfile = json.load(jsonfile)
+
+		prf_text = get_profile_text(jsonfile)
 
 		# encode user profiles to embeddings and save as .npy
 		user_embeddings = get_profile_embeddings(prf_text, path = os.path.join(dir, f'user_feat.npy'))
