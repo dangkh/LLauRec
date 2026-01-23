@@ -23,7 +23,7 @@ if __name__ == '__main__':
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument("--user", '-u', type=bool, default=False, help='encoding user profile or not')
 	parser.add_argument("--tuning", '-t', type=bool, default=False, help='encoding tuning user profile or not')
-	parser.add_argument("--item_profile", type=bool, default=False, help='whether to use item profile or not')
+	parser.add_argument("--item_profile",'-i', type=bool, default=False, help='whether to use item profile or not')
 	args, _ = parser.parse_known_args()
 	if args.user:
 		dir = f'./data/{args.dataset}/'
