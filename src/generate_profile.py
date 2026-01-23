@@ -109,6 +109,8 @@ if __name__ == '__main__':
 	if args.tuning:
 		selected_model = f"./qwen4B_it_model_{args.dataset}"
 
+	print(selected_model)
+	
 	model, tokenizer = FastLanguageModel.from_pretrained(
 		model_name = selected_model,
 		max_seq_length = 4096, # Choose any for long context!

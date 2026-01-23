@@ -20,15 +20,21 @@ def overlap_items(list1, list2):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
+	parser.add_argument('--dataset', '-d', type=str, default='yelp', help='name of datasets')
 	parser.add_argument("--item_profile", type=bool, default=False, help='whether to use item profile or not')
 	args, _ = parser.parse_known_args()
 
 	dir = f'./data/{args.dataset}/'
 	# =========================
 	# Load meta data
+	# meta contains information of item
+	# iid_asin contains mapping id prf and id meta
 	# =========================
-	meta_csv_path = os.path.join(dir, f'meta_{args.dataset}.json.gz')
+	if args.dataset in ['book', 'movie']:
+		meta_csv_path = os.path.join(dir, f'meta_{args.dataset}.json.gz')
+	else:
+		meta_csv_path = os.path.join(dir, f'yelp_academic_dataset_business.json')
+		
 	iid_asin_path = os.path.join(dir, f"{args.dataset}_asin.json")
 	iid_asin = {}
 # -------- read JSON Lines --------
@@ -40,6 +46,9 @@ if __name__ == '__main__':
 				records.append(json.loads(line))
 
 	iid_df = pd.DataFrame(records)   # columns: iid, asin
+	# rename business_id to asin for yelp
+	if args.dataset == 'yelp':
+		iid_df = iid_df.rename(columns={'business_id': 'asin'})
 	iid_asin_set = set(iid_df['asin'].tolist())
 	# print(iid_df.head())
 	print(f"Number of items in iid_asin: {len(iid_asin_set)}")
@@ -86,7 +95,7 @@ if __name__ == '__main__':
 		item_profile = prf[idx]['profile']
 		prf_text.append(item_profile)
 
-	with open("./data/book/tuning/usr.json", 'r', encoding='utf-8') as f:
+	with open(f"./data/{args.dataset}/sample_user.json", 'r', encoding='utf-8') as f:
 		sampleUser = json.load(f)
 
 	# random a single sample of item profiles
@@ -95,16 +104,36 @@ if __name__ == '__main__':
 
 	metaDF_filtered_path = os.path.join(dir, f'metaDF_filtered_{args.dataset}.csv')
 	if os.path.exists(metaDF_filtered_path) is False:
+		# load, clean, using the selected data
 		data = []
-		with gzip.open(meta_csv_path, 'rt') as f:
-			for line in tqdm(f):
-				tmp = ast.literal_eval(line)
-				if tmp['asin'] not in iid_asin_set:
-					continue
-				data.append(tmp)
+		if args.dataset in ['book', 'movie']:
+			with gzip.open(meta_csv_path, 'rt') as f:
+				for line in tqdm(f):
+					tmp = ast.literal_eval(line)
+					if tmp['asin'] not in iid_asin_set:
+						continue
+					data.append(tmp)
 
-		metaDF = pd.DataFrame(data)
-		metaDF_filtered = metaDF[["asin", "title", "description"]].copy()
+			metaDF = pd.DataFrame(data)
+			metaDF_filtered = metaDF[["asin", "title", "description"]].copy()
+		else:
+			with open(meta_csv_path, 'r', encoding='utf-8') as f:
+				for line in tqdm(f):
+					tmp = json.loads(line)
+					if tmp['business_id'] not in iid_asin_set:
+						continue
+					data.append(tmp)
+
+			metaDF = pd.DataFrame(data)
+			metaDF_filtered = metaDF[["business_id", "name", "address", "city"]].copy()
+			# combine address and city as description
+			metaDF_filtered['categories'] = metaDF_filtered['address'] + ', ' + metaDF_filtered['city']
+			# rename columns
+			metaDF_filtered = metaDF_filtered.rename(columns={
+				'business_id': 'asin',
+				'name': 'title',
+				'categories': 'description'
+			})
 		# saving metaDF_filtered
 		metaDF_filtered.to_csv(metaDF_filtered_path, index=False)
 	else:
@@ -207,7 +236,7 @@ if __name__ == '__main__':
 				tmp = f"Title: {title}\nDescription: {description}\n\n"
 				itemInfo += tmp
 			sys_prompt = sys_prompt2
-			answer = sampleUser[str(uid)]
+			answer = str(sampleUser[str(uid)])
 
 
 		dataset.append({
