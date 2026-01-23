@@ -7,9 +7,10 @@ VIRAL/
 ├── data/
 │   └── <dataset_name>/
 │       ├── train/test/valid_mat.pkl # train/valid/test set (sparse matrix)
-│       ├── <dataset_name>_5.json
-│       ├── i_id_mapping.csv
-│       └── meta_<dataset_name>.json
+│       ├── <dataset_name>_asin.json
+│       ├── sample_user_profile.json
+│       ├── meta_<dataset_name>.json # contains meta data
+│       └── 
 ├── README.md
 ├── src
 │	├──get_text_feat.py              # Script to generate text embeddings
@@ -18,12 +19,13 @@ VIRAL/
 ```
 
 Convert dataset preproced in RLM [paper](https://arxiv.org/abs/2310.15950) to our standard.
-```sh
+
+```sh train/valid/test to <dataset_name>.inter
 python src/convert.py -d book
 ```
 
-```sh
-python src/preprocess.py -d book
+```sh 
+python src/generate_profile.py -d book -t False
 ```
 
 

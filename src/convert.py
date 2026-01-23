@@ -85,24 +85,24 @@ if __name__ == '__main__':
 
     print(f'Merged interactions written to: {output_path}')
     
-    embed_path = os.path.join(data_dir, 'itm_emb_np.pkl')
-    assert os.path.exists(embed_path), f"{embed_path} does not exist."
-    with open(embed_path, 'rb') as f:
-        item_emb = pickle.load(f)
-    # Convert item embeddings to numpy array and save as .npy
-    item_emb_np = np.array(item_emb)
-    npy_output_path = os.path.join(data_dir, 'text_feat.npy')
-    np.save(npy_output_path, item_emb_np)
-    print(f'Item embeddings saved to: {npy_output_path}')
-    numUser, numItem = train.shape[0], train.shape[1]
-    assert item_emb_np.shape[0] == numItem, "Item embedding count does not match number of items."
-    print('Conversion completed. {}, {} items, {} users.'.format(output_path, numItem, numUser))
+    # embed_path = os.path.join(data_dir, 'itm_emb_np.pkl')
+    # assert os.path.exists(embed_path), f"{embed_path} does not exist."
+    # with open(embed_path, 'rb') as f:
+    #     item_emb = pickle.load(f)
+    # # Convert item embeddings to numpy array and save as .npy
+    # item_emb_np = np.array(item_emb)
+    # npy_output_path = os.path.join(data_dir, 'text_feat.npy')
+    # np.save(npy_output_path, item_emb_np)
+    # print(f'Item embeddings saved to: {npy_output_path}')
+    # numUser, numItem = train.shape[0], train.shape[1]
+    # assert item_emb_np.shape[0] == numItem, "Item embedding count does not match number of items."
+    # print('Conversion completed. {}, {} items, {} users.'.format(output_path, numItem, numUser))
 
-    user_profile_path = os.path.join(data_dir, 'usr_emb_np.pkl')
-    assert os.path.exists(user_profile_path), f"{user_profile_path} does not exist."
-    with open(user_profile_path, 'rb') as f:
-        user_emb = pickle.load(f)
-    user_emb_np = np.array(user_emb)
-    user_npy_output_path = os.path.join(data_dir, 'user_feat.npy')
-    np.save(user_npy_output_path, user_emb_np)
-    print(f'User embeddings saved to: {user_npy_output_path}')
+    # user_profile_path = os.path.join(data_dir, 'usr_emb_np.pkl')
+    # assert os.path.exists(user_profile_path), f"{user_profile_path} does not exist."
+    # with open(user_profile_path, 'rb') as f:
+    #     user_emb = pickle.load(f)
+    # user_emb_np = np.array(user_emb)
+    # user_npy_output_path = os.path.join(data_dir, 'user_feat.npy')
+    # np.save(user_npy_output_path, user_emb_np)
+    # print(f'User embeddings saved to: {user_npy_output_path}')

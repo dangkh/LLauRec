@@ -95,7 +95,7 @@ if __name__ == '__main__':
 		item_profile = prf[idx]['profile']
 		prf_text.append(item_profile)
 
-	with open(f"./data/{args.dataset}/sample_user.json", 'r', encoding='utf-8') as f:
+	with open(f"./data/{args.dataset}/sample_user_profile.json", 'r', encoding='utf-8') as f:
 		sampleUser = json.load(f)
 
 	# random a single sample of item profiles

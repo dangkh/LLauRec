@@ -46,7 +46,7 @@ if __name__ == '__main__':
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
 	parser.add_argument("--shard", type=int, default=0)
 	parser.add_argument("--num_shards", type=int, default=1)
-	parser.add_argument("--out", type=str, default="out.jsonl")
+	parser.add_argument("--out", type=str, default="sample_user_profile.json")
 	args, _ = parser.parse_known_args()
 
 	# =========================
