@@ -20,7 +20,7 @@ def overlap_items(list1, list2):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--dataset', '-d', type=str, default='yelp', help='name of datasets')
+	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument("--user", '-u', type=bool, default=False, help='encoding user profile or not')
 	parser.add_argument("--tuning", '-t', type=bool, default=False, help='encoding tuning user profile or not')
 	parser.add_argument("--item_profile", type=bool, default=False, help='whether to use item profile or not')
