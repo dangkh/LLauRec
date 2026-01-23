@@ -37,7 +37,7 @@ if __name__ == '__main__':
 		prf_text = get_profile_text(file_path)
 
 		# encode user profiles to embeddings and save as .npy
-		user_embeddings = get_profile_embeddings(prf_text, path = os.path.join(dir, f'user_profile.npy'))
+		user_embeddings = get_profile_embeddings(prf_text, path = os.path.join(dir, f'user_feat.npy'))
 		print("User profile embeddings shape:", user_embeddings.shape)
 	else:
 		dir = f'./data/{args.dataset}/'
@@ -192,10 +192,10 @@ if __name__ == '__main__':
 
 		if args.item_profile:
 			# save prf embeddings as .npy in the order of itemID
-			text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat_profile.npy'))
+			text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
 		else:	
 			# encode text_feat to embeddings and save as .npy
-			text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat_original.npy'))
+			text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
 		
 		top_k = 10
 		item_kitem = build_item_item_knn(text_embeddings, top_k=top_k)
