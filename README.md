@@ -24,13 +24,21 @@ Convert dataset preproced in RLM [paper](https://arxiv.org/abs/2310.15950) to ou
 python src/convert.py -d book
 ```
 
-```sh 
-python src/generate_profile.py -d book -t False
+
+
+```sh convert item infor to embeding
+python src/preprocess.py -d book
 ```
 
 
-```sh
-python src/preprocess.py -d book
+```sh tuning and generate profile for user
+python src/tuning.py -d book -t False
+python src/generate_profile.py -d book -t True
+```
+
+
+```sh convert profile user to embedding
+python src/preprocess.py -d book -u True -t True
 ```
 
 Run
