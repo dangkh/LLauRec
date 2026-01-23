@@ -12,23 +12,29 @@ import pickle
 import numpy as np
 import yaml
 import gzip
-from sentence_transformers import SentenceTransformer
-bertmodel = SentenceTransformer('all-MiniLM-L6-v2')
-
+from datasets import Dataset
+from helper import build_item_item_knn, get_itemDesc, get_profile_embeddings, getUser_Interaction
 
 def overlap_items(list1, list2):
 	return len(set(list1) & set(list2))
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
+	parser.add_argument('--dataset', '-d', type=str, default='yelp', help='name of datasets')
+	parser.add_argument("--item_profile", type=bool, default=False, help='whether to use item profile or not')
 	args, _ = parser.parse_known_args()
 
 	dir = f'./data/{args.dataset}/'
 	# =========================
 	# Load meta data
+	# meta contains information of item
+	# iid_asin contains mapping id prf and id meta
 	# =========================
-	meta_csv_path = os.path.join(dir, f'meta_{args.dataset}.json.gz')
+	if args.dataset in ['book', 'movie']:
+		meta_csv_path = os.path.join(dir, f'meta_{args.dataset}.json.gz')
+	else:
+		meta_csv_path = os.path.join(dir, f'yelp_academic_dataset_business.json')
+		
 	iid_asin_path = os.path.join(dir, f"{args.dataset}_asin.json")
 	iid_asin = {}
 # -------- read JSON Lines --------
@@ -40,11 +46,13 @@ if __name__ == '__main__':
 				records.append(json.loads(line))
 
 	iid_df = pd.DataFrame(records)   # columns: iid, asin
+	# rename business_id to asin for yelp
+	if args.dataset == 'yelp':
+		iid_df = iid_df.rename(columns={'business_id': 'asin'})
 	iid_asin_set = set(iid_df['asin'].tolist())
 	# print(iid_df.head())
 	print(f"Number of items in iid_asin: {len(iid_asin_set)}")
 	print(f"Sample iid_asin: {iid_df.sample(5)}")
-
 
 
 	# =========================
@@ -82,22 +90,50 @@ if __name__ == '__main__':
 	print("Number of items in metaDF and prf:", len(meta_items & prf_items))
 	print("Number of items only in metaDF:", len(meta_items - prf_items))
 
+	prf_text = []
+	for idx in prf_items:
+		item_profile = prf[idx]['profile']
+		prf_text.append(item_profile)
+
+	with open(f"./data/{args.dataset}/sample_user.json", 'r', encoding='utf-8') as f:
+		sampleUser = json.load(f)
+
 	# random a single sample of item profiles
 	randomID = random.choice(list(prf_items))
 	print("An item profile contains:", prf[randomID].keys(), "sample item:", prf[randomID])
 
 	metaDF_filtered_path = os.path.join(dir, f'metaDF_filtered_{args.dataset}.csv')
 	if os.path.exists(metaDF_filtered_path) is False:
+		# load, clean, using the selected data
 		data = []
-		with gzip.open(meta_csv_path, 'rt') as f:
-			for line in tqdm(f):
-				tmp = ast.literal_eval(line)
-				if tmp['asin'] not in iid_asin_set:
-					continue
-				data.append(tmp)
+		if args.dataset in ['book', 'movie']:
+			with gzip.open(meta_csv_path, 'rt') as f:
+				for line in tqdm(f):
+					tmp = ast.literal_eval(line)
+					if tmp['asin'] not in iid_asin_set:
+						continue
+					data.append(tmp)
 
-		metaDF = pd.DataFrame(data)
-		metaDF_filtered = metaDF[["asin", "title", "description"]].copy()
+			metaDF = pd.DataFrame(data)
+			metaDF_filtered = metaDF[["asin", "title", "description"]].copy()
+		else:
+			with open(meta_csv_path, 'r', encoding='utf-8') as f:
+				for line in tqdm(f):
+					tmp = json.loads(line)
+					if tmp['business_id'] not in iid_asin_set:
+						continue
+					data.append(tmp)
+
+			metaDF = pd.DataFrame(data)
+			metaDF_filtered = metaDF[["business_id", "name", "address", "city"]].copy()
+			# combine address and city as description
+			metaDF_filtered['categories'] = metaDF_filtered['address'] + ', ' + metaDF_filtered['city']
+			# rename columns
+			metaDF_filtered = metaDF_filtered.rename(columns={
+				'business_id': 'asin',
+				'name': 'title',
+				'categories': 'description'
+			})
 		# saving metaDF_filtered
 		metaDF_filtered.to_csv(metaDF_filtered_path, index=False)
 	else:
@@ -120,9 +156,8 @@ if __name__ == '__main__':
 		how="left"
 	)
 	merged_df = merged_df.sort_values(by='iid').reset_index(drop=True)
-	fullMeta_filtered_path = os.path.join(dir, f'fullMeta_{args.dataset}.csv')
-	merged_df.to_csv(fullMeta_filtered_path, index=False)
-
+	
+	
 	# print number of missing both titles and descriptions
 	num_missing_both = merged_df['title'].isnull() & merged_df['description'].isnull()
 	print(f"Number of missing both titles and descriptions: {num_missing_both.sum()}")
@@ -132,75 +167,86 @@ if __name__ == '__main__':
 	# fill null titles or descriptions with empty string
 	merged_df['title'] = merged_df['title'].fillna('')
 	merged_df['description'] = merged_df['description'].fillna('')
-
+	merged_df['profile'] = prf_text
+	fullMeta_filtered_path = os.path.join(dir, f'fullMeta_{args.dataset}.csv')
+	merged_df.to_csv(fullMeta_filtered_path, index=False)
 
 	# create new column with combine title and description
-	merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['description']
+	merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['profile']
 
-	# encode text_feat to embeddings and save as .npy
+	if args.item_profile:
+		# save prf embeddings as .npy in the order of itemID
+		text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat_profile.npy'))
+	else:	
+		# encode text_feat to embeddings and save as .npy
+		text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat_original.npy'))
 	
-	text_embeddings = bertmodel.encode(merged_df['text_feat'].tolist(), show_progress_bar=True)
-	text_embeddings = np.array(text_embeddings)
-	text_feat_npy_path = os.path.join(dir, f'text_feat_original.npy')
-	np.save(text_feat_npy_path, text_embeddings)
+	top_k = 10
+	item_kitem = build_item_item_knn(text_embeddings, top_k=top_k)
+	item_item_path = f'./data/{args.dataset}/item_top{top_k}item.npy'
+	np.save(item_item_path, item_kitem)
 
-	# save prf embeddings as .npy in the order of itemID
-	prf_text = []
-	for idx in prf_items:
-		item_profile = prf[idx]['profile']
-		prf_text.append(item_profile)
-	prf_text_embeddings = bertmodel.encode(prf_text, show_progress_bar=True)
-	prf_text_embeddings = np.array(prf_text_embeddings)
-	prf_text_feat_npy_path = os.path.join(dir, f'profile_text_feat.npy')
-	np.save(prf_text_feat_npy_path, prf_text_embeddings)
+	user_interactions = getUser_Interaction(interDF)
+	itemDesc = get_itemDesc(merged_df, merge=False)
+	checkarray = []
+	listUser = list(user_interactions.keys())
+
+	with open("src/prompts.yaml", "r") as f:
+		all_prompts = yaml.safe_load(f)
+	tun_prompt = all_prompts['tuning']
+	sys_prompt1 = all_prompts[args.dataset]['sys']
+	sys_prompt2 = all_prompts[args.dataset]['user']
+
+	tuningLLM_name = 'QwenTuning'
+	dataset = []
+	for uid in tqdm(listUser):
+		u_items = user_interactions[uid]
+		selected = u_items[-10:] 
+		if len(dataset) % 2 == 0:
+			ground_truth = selected[-1]
+			interacted = selected[:-1]
+			itemInfo = ""
+			for item in interacted:
+				title, description = itemDesc[item]
+				tmp = f"Title: {title}\nDescription: {description}\n\n"
+				itemInfo += tmp
+
+			candidates = item_kitem[ground_truth]
+			listC = []
+			for c in candidates:
+				if c in u_items:
+					continue
+				listC.append(c)
+			random.shuffle(listC)
+			listC = listC[:3]
+			checkarray.append(len(listC))
+			candidateInfo = ""
+			for c in listC:
+				title, description = itemDesc[c]
+				tmp = f"Title: {title}\nDescription: {description}\n\n"
+				candidateInfo += tmp
+
+			userprompt = tun_prompt.format(itemInfo, candidateInfo)
+			answer = f"{itemDesc[ground_truth][1]}"
+			sys_prompt = sys_prompt1
+		else:
+			itemInfo = "The user has purchased: \n"
+			for item in selected:
+				title, description = itemDesc[item]
+				tmp = f"Title: {title}\nDescription: {description}\n\n"
+				itemInfo += tmp
+			sys_prompt = sys_prompt2
+			answer = str(sampleUser[str(uid)])
+
+
+		dataset.append({
+			"userprompt": itemInfo,
+			"systemprompt": sys_prompt,
+			"answer": answer
+		})
+
 	
-
-	# # =========================
-	# # Preparing for users
-	# # =========================
-	# # 1. get user interactions in metaDF in x_label==0
-	# user_interactions = {}
-	# for idx, row in tqdm(metaDF.iterrows(), total=metaDF.shape[0]):
-	# 	uid = row['userID']
-	# 	iid = row['itemID']
-	# 	label = row['x_label']
-	# 	if label != 0:
-	# 		continue
-	# 	if uid not in user_interactions:
-	# 		user_interactions[uid] = []
-	# 	user_interactions[uid].append(iid)
-
-	# # # 2. for each user, get closest user by item overlap
-	# # user_top1_similar = {}
-	# # for uid in tqdm(user_interactions.keys()):
-	# # 	u_items = user_interactions[uid]
-	# # 	max_overlap = -1
-	# # 	top1_uid = -1
-	# # 	for other_uid in user_interactions.keys():
-	# # 		if other_uid == uid:
-	# # 			continue
-	# # 		other_u_items = user_interactions[other_uid]
-	# # 		overlap = overlap_items(u_items, other_u_items)
-	# # 		if overlap > max_overlap:
-	# # 			max_overlap = overlap
-	# # 			top1_uid = other_uid
-	# # 	user_top1_similar[uid] = (top1_uid, max_overlap)
-
-
-	# # =========================
-	# # Profiling for user
-	# # =========================
-	# with open("src/prompts.yaml", "r") as f:
-	# 	all_prompts = yaml.safe_load(f)
-	# cprompt = all_prompts[args.dataset]['user']
-	# print(cprompt)
-	# user_profiles = {}
-	# # for uid in tqdm(user_interactions.keys()):
-	# # 	u_items = user_interactions[uid]
-	# # 	# list all interacted items, title: item_title and description: item_profile.
-	# # 	user_items = []
-
-		
-		
-
-
+	dataset = Dataset.from_list(dataset)
+	dataset.to_json(f"./data/{args.dataset}/tuningData.jsonl")
+	# stat for candidate
+	print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))	

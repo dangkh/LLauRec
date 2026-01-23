@@ -22,6 +22,15 @@ Convert dataset preproced in RLM [paper](https://arxiv.org/abs/2310.15950) to ou
 python src/convert.py -d book
 ```
 
+```sh
+python src/preprocess.py -d book
+```
+
+
+```sh
+python src/preprocess.py -d book
+```
+
 Run
 ```sh
 python src/main.py -d book
