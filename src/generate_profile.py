@@ -105,7 +105,7 @@ if __name__ == '__main__':
 		"unsloth/orpheus-3b-0.1-ft-unsloth-bnb-4bit" # [NEW] We support TTS models!
 	] # More models at https://huggingface.co/unsloth
 
-	selected_model = "unsloth/Qwen3-14B"
+	selected_model = "unsloth/Qwen3-4B-Instruct-2507"
 	if args.tuning:
 		selected_model = f"./qwen4B_it_model_{args.dataset}"
 

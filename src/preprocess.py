@@ -24,6 +24,7 @@ if __name__ == '__main__':
 	parser.add_argument("--user", '-u', type=bool, default=False, help='encoding user profile or not')
 	parser.add_argument("--tuning", '-t', type=bool, default=False, help='encoding tuning user profile or not')
 	parser.add_argument("--item_profile",'-i', type=bool, default=False, help='whether to use item profile or not')
+	parser.add_argument("--export_tuning",'-e', type=bool, default=False, help='whether to export tuning data or not')
 	args, _ = parser.parse_known_args()
 	if args.user:
 		dir = f'./data/{args.dataset}/'
@@ -115,8 +116,7 @@ if __name__ == '__main__':
 			item_profile = prf[idx]['profile']
 			prf_text.append(item_profile)
 
-		with open(f"./data/{args.dataset}/sample_user_profile.json", 'r', encoding='utf-8') as f:
-			sampleUser = json.load(f)
+		
 
 		# random a single sample of item profiles
 		randomID = random.choice(list(prf_items))
@@ -210,63 +210,66 @@ if __name__ == '__main__':
 		itemDesc = get_itemDesc(merged_df, merge=False)
 		checkarray = []
 		listUser = list(user_interactions.keys())
+		if args.export_tuning:
+			with open("src/prompts.yaml", "r") as f:
+				all_prompts = yaml.safe_load(f)
+			tun_prompt = all_prompts['tuning']
+			sys_prompt1 = all_prompts[args.dataset]['sys']
+			sys_prompt2 = all_prompts[args.dataset]['user']
 
-		with open("src/prompts.yaml", "r") as f:
-			all_prompts = yaml.safe_load(f)
-		tun_prompt = all_prompts['tuning']
-		sys_prompt1 = all_prompts[args.dataset]['sys']
-		sys_prompt2 = all_prompts[args.dataset]['user']
+			with open(f"./data/{args.dataset}/sample_user_profile.json", 'r', encoding='utf-8') as f:
+				sampleUser = json.load(f)
 
-		tuningLLM_name = 'QwenTuning'
-		dataset = []
-		for uid in tqdm(listUser):
-			u_items = user_interactions[uid]
-			selected = u_items[-10:] 
-			if len(dataset) % 2 == 0:
-				ground_truth = selected[-1]
-				interacted = selected[:-1]
-				itemInfo = ""
-				for item in interacted:
-					title, description = itemDesc[item]
-					tmp = f"Title: {title}\nDescription: {description}\n\n"
-					itemInfo += tmp
+			tuningLLM_name = 'QwenTuning'
+			dataset = []
+			for uid in tqdm(listUser):
+				u_items = user_interactions[uid]
+				selected = u_items[-10:] 
+				if len(dataset) % 2 == 0:
+					ground_truth = selected[-1]
+					interacted = selected[:-1]
+					itemInfo = ""
+					for item in interacted:
+						title, description = itemDesc[item]
+						tmp = f"Title: {title}\nDescription: {description}\n\n"
+						itemInfo += tmp
 
-				candidates = item_kitem[ground_truth]
-				listC = []
-				for c in candidates:
-					if c in u_items:
-						continue
-					listC.append(c)
-				random.shuffle(listC)
-				listC = listC[:3]
-				checkarray.append(len(listC))
-				candidateInfo = ""
-				for c in listC:
-					title, description = itemDesc[c]
-					tmp = f"Title: {title}\nDescription: {description}\n\n"
-					candidateInfo += tmp
+					candidates = item_kitem[ground_truth]
+					listC = []
+					for c in candidates:
+						if c in u_items:
+							continue
+						listC.append(c)
+					random.shuffle(listC)
+					listC = listC[:3]
+					checkarray.append(len(listC))
+					candidateInfo = ""
+					for c in listC:
+						title, description = itemDesc[c]
+						tmp = f"Title: {title}\nDescription: {description}\n\n"
+						candidateInfo += tmp
 
-				userprompt = tun_prompt.format(itemInfo, candidateInfo)
-				answer = f"{itemDesc[ground_truth][1]}"
-				sys_prompt = sys_prompt1
-			else:
-				itemInfo = "The user has purchased: \n"
-				for item in selected:
-					title, description = itemDesc[item]
-					tmp = f"Title: {title}\nDescription: {description}\n\n"
-					itemInfo += tmp
-				sys_prompt = sys_prompt2
-				answer = str(sampleUser[str(uid)])
+					userprompt = tun_prompt.format(itemInfo, candidateInfo)
+					answer = f"{itemDesc[ground_truth][1]}"
+					sys_prompt = sys_prompt1
+				else:
+					itemInfo = "The user has purchased: \n"
+					for item in selected:
+						title, description = itemDesc[item]
+						tmp = f"Title: {title}\nDescription: {description}\n\n"
+						itemInfo += tmp
+					sys_prompt = sys_prompt2
+					answer = str(sampleUser[str(uid)])
 
 
-			dataset.append({
-				"userprompt": itemInfo,
-				"systemprompt": sys_prompt,
-				"answer": answer
-			})
+				dataset.append({
+					"userprompt": itemInfo,
+					"systemprompt": sys_prompt,
+					"answer": answer
+				})
 
-		
-		dataset = Dataset.from_list(dataset)
-		dataset.to_json(f"./data/{args.dataset}/tuningData.jsonl")
-		# stat for candidate
-		print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))	
+			
+			dataset = Dataset.from_list(dataset)
+			dataset.to_json(f"./data/{args.dataset}/tuningData.jsonl")
+			# stat for candidate
+			print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))	

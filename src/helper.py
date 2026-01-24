@@ -96,8 +96,8 @@ def get_itemDesc(metaDF, merge=True):
 
 
 if __name__ == "__main__":
-	merge_json_files("./data/book/tuning/usr_prf_LLama_0.json", "./data/book/tuning/usr_prf_LLama_1.json", "./data/book/tuning/usr0.json")
-	merge_json_files("./data/book/tuning/usr_prf_LLama_2.json", "./data/book/tuning/usr_prf_LLama_3.json", "./data/book/tuning/usr1.json")
-	merge_json_files("./data/book/tuning/usr0.json", "./data/book/tuning/usr1.json", "./data/book/tuning/tuning_user_profile.json")
+	merge_json_files("./data/yelp/usr_prf_LLama_0.json", "./data/yelp/usr_prf_LLama_1.json", "./data/yelp/usr0.json")
+	merge_json_files("./data/yelp/usr_prf_LLama_2.json", "./data/yelp/usr_prf_LLama_3.json", "./data/yelp/usr1.json")
+	merge_json_files("./data/yelp/usr0.json", "./data/yelp/usr1.json", "./data/yelp/tuning_user_profile.json")
 	
 	
