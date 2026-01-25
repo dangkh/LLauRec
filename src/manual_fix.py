@@ -16,26 +16,28 @@ with open(file_path, 'r', encoding='utf-8') as jsonfile:
 
 counter = 0
 counter2 = 0
+counter3 = 0
 profile = []
 for ii in range(len(jsonfile)):
 	try:
 		level1 = ast.literal_eval(jsonfile[str(ii)]['summary'])
-		summarization = level1["summarization"]
+		summarization = level1["summarization"]["summarization"]
 	except Exception:
 		try:
 			level1 = ast.literal_eval(jsonfile[str(ii)]['summary'])
-			level2 = ast.literal_eval(level1['summary'])
+			level2 = ast.literal_eval(level1['summarization'])
 			summarization = level2['summarization']
+			counter2 += 1
 		except Exception:
 			try:
 				summarization = jsonfile[str(ii)]['summary']
-				counter2 += 1
+				counter3 += 1
 			except Exception:
 				print(f"Error parsing JSON for key: {ii}")
 				print(f"Value: {jsonfile[str(ii)]}")
 	profile.append(summarization)
 	counter += 1
-print(f"Total successfully parsed profiles: {counter}")
+print(f"Total successfully parsed profiles: {counter} , {counter2} with extra level, {counter3} with direct text")
 print(f"Total profiles parsed with encoding errors: {counter2}")
 
 # encode user profiles to embeddings and save as .npy
