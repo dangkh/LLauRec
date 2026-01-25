@@ -76,7 +76,7 @@ if __name__ == '__main__':
 	)
 	with open("src/prompts.yaml", "r") as f:
 		all_prompts = yaml.safe_load(f)
-	tun_prompt = all_prompts['tuning']
+	tun_prompt = all_prompts[args.dataset]['tuning']
 	sys_prompt = all_prompts[args.dataset]['sys']
 
 	dataPath = f"./data/{args.dataset}/tuningData.jsonl"
