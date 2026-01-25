@@ -42,7 +42,7 @@ if __name__ == '__main__':
 		prf_text = get_profile_text(jsonfile)
 
 		# encode user profiles to embeddings and save as .npy
-		user_embeddings = get_profile_embeddings(prf_text, path = os.path.join(dir, f'user_feat.npy'))
+		user_embeddings = get_profile_embeddings(prf_text, save= True, path = os.path.join(dir, f'user_feat.npy'))
 		print("User profile embeddings shape:", user_embeddings.shape)
 	else:
 		dir = f'./data/{args.dataset}/'
