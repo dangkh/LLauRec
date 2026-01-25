@@ -199,7 +199,7 @@ class VLIF(GeneralRecommender):
     def calculate_loss(self, interaction):
         pos_scores, neg_scores, cl_loss = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
-        return loss_value + cl_loss  + self.reg_weight * reg_params(self)
+        return loss_value + cl_loss * 0.1 
 
     def full_sort_predict(self, interaction):
         user_tensor = self.result_embed[:self.n_users]
