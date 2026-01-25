@@ -17,6 +17,21 @@ from common.abstract_recommender import GeneralRecommender
 from common.loss import BPRLoss, EmbLoss
 from common.init import xavier_uniform_initialization
 
+def cal_infonce_loss(embeds1, embeds2, all_embeds2, temp=1.0):
+    normed_embeds1 = embeds1 / torch.sqrt(1e-8 + embeds1.square().sum(-1, keepdim=True))
+    normed_embeds2 = embeds2 / torch.sqrt(1e-8 + embeds2.square().sum(-1, keepdim=True))
+    normed_all_embeds2 = all_embeds2 / torch.sqrt(1e-8 + all_embeds2.square().sum(-1, keepdim=True))
+    nume_term = -(normed_embeds1 * normed_embeds2 / temp).sum(-1)
+    deno_term = torch.log(torch.sum(torch.exp(normed_embeds1 @ normed_all_embeds2.T / temp), dim=-1))
+    cl_loss = (nume_term + deno_term).sum()
+    return cl_loss
+
+def reg_params(model):
+    reg_loss = 0
+    for W in model.parameters():
+        reg_loss += W.norm(2).square()
+    return reg_loss
+
 class VLIF(GeneralRecommender):
     def __init__(self, config, dataset):
         super(VLIF, self).__init__(config, dataset)
@@ -149,8 +164,20 @@ class VLIF(GeneralRecommender):
         user_feat = F.normalize(self.mlp_user(self.user_feat))
         
         self.t_rep, self.t_preference = self.t_gcn(self.edge_index, item_feat)
-        self.id_rep, self.id_preference = self.id_gcn(self.edge_index, self.id_embedding.weight)
+        self.id_rep1, _ = self.id_gcn(self.edge_index, self.id_embedding.weight, noise=True)
+        self.id_rep2, _ = self.id_gcn(self.edge_index, self.id_embedding.weight, noise=True)
+        self.id_rep, _ = self.id_gcn(self.edge_index, self.id_embedding.weight)
 
+        user_embed1, item_emb1 = self.id_rep1[:self.num_user], self.id_rep1[self.num_user:]
+        user_embed2, item_emb2 = self.id_rep2[:self.num_user], self.id_rep2[self.num_user:]
+        # simGCL loss:
+        anc_embeds1 = user_embed1[user_nodes]
+        anc_embeds2 = user_embed2[user_nodes]
+        pos_embeds1 = item_emb1[pos_item_nodes - self.num_user]
+        pos_embeds2 = item_emb2[pos_item_nodes - self.num_user]
+        cl_loss = cal_infonce_loss(anc_embeds1, anc_embeds2, user_embed2, self.temperature) + cal_infonce_loss(pos_embeds1, pos_embeds2, item_emb2, self.temperature)
+        cl_loss /= anc_embeds1.shape[0]
+        
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
 
@@ -167,13 +194,12 @@ class VLIF(GeneralRecommender):
         neg_item_tensor = self.result_embed[neg_item_nodes]
         pos_scores = torch.sum(user_tensor * pos_item_tensor, dim=1)
         neg_scores = torch.sum(user_tensor * neg_item_tensor, dim=1)
-        return pos_scores, neg_scores
+        return pos_scores, neg_scores, cl_loss
 
     def calculate_loss(self, interaction):
-        user = interaction[0]
-        pos_scores, neg_scores = self.forward(interaction)
+        pos_scores, neg_scores, cl_loss = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
-        return loss_value 
+        return loss_value + cl_loss  + self.reg_weight * reg_params(self)
 
     def full_sort_predict(self, interaction):
         user_tensor = self.result_embed[:self.n_users]
@@ -201,6 +227,7 @@ class GCN(torch.nn.Module):
         self.dropout = dropout
         self.device = device
         self.userprofile = user_profile
+        self.eps = 0.9
 
         if self.has_feature:
             self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
@@ -213,17 +240,27 @@ class GCN(torch.nn.Module):
                 gain=1))
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
-    def forward(self,edge_index,features):
+    def forward(self,edge_index,features, noise = False):
         temp_features = features
         temp_profile = self.preference
         x = torch.cat((temp_profile, temp_features), dim=0)
         x = F.normalize(x)
         h = self.conv_embed_1(x, edge_index)  # equation 1
+        if noise:
+            h = self._perturb_embedding(h)
         h_1 = self.conv_embed_1(h, edge_index)
+        if noise:
+            h_1 = self._perturb_embedding(h_1)
         h_2 = self.conv_embed_1(h_1, edge_index)
+        if noise:
+            h_2 = self._perturb_embedding(h_2)
 
         x_hat =h + x + h_1 + h_2
         return x_hat, self.preference
+    
+    def _perturb_embedding(self, embeds):
+        noise = (F.normalize(torch.rand(embeds.shape).cuda(), p=2) * torch.sign(embeds)) * self.eps
+        return embeds + noise
 
 
 class Base_gcn(MessagePassing):
