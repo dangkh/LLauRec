@@ -60,7 +60,7 @@ class VLIF(GeneralRecommender):
         self.t_preference = None
         self.dim_latent = 64
         self.mm_adj = None
-
+        self.temperature = 0.2
         dataset_path = os.path.abspath(config['data_path'] + config['dataset'])
         
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
@@ -259,7 +259,7 @@ class GCN(torch.nn.Module):
         return x_hat, self.preference
     
     def _perturb_embedding(self, embeds):
-        noise = (F.normalize(torch.rand(embeds.shape).cuda(), p=2) * torch.sign(embeds)) * self.eps
+        noise = (F.normalize(torch.rand(embeds.shape).to(self.device), p=2) * torch.sign(embeds)) * self.eps
         return embeds + noise
 
 
