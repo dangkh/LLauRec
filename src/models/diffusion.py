@@ -48,7 +48,7 @@ class ConditionalUNet(nn.Module):
         
         # Down blocks
         self.down1 = nn.Sequential(
-            nn.Linear(emb_dim, hidden_dim),
+            nn.Linear(emb_dim + hidden_dim, hidden_dim),  # Added text conditioning
             nn.GELU()
         )
         
@@ -59,7 +59,7 @@ class ConditionalUNet(nn.Module):
         
         # Bottleneck
         self.bottleneck = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim * 2),
+            nn.Linear(hidden_dim * 2 + hidden_dim, hidden_dim * 2),  # Added text conditioning
             nn.GELU(),
             nn.Linear(hidden_dim * 2, hidden_dim * 2),
             nn.GELU()
@@ -91,14 +91,14 @@ class ConditionalUNet(nn.Module):
         text_cond = self.text_proj(text_emb)
         
         # Downsampling with conditioning
-        h1 = self.down1(x)
+        h1 = self.down1(torch.cat([x, text_cond], dim=-1))  # Add text conditioning to input
         
         # Concatenate with time and text conditioning
         h1_cond = torch.cat([h1, t_emb, text_cond], dim=-1)
         h2 = self.down2(h1_cond)
         
         # Bottleneck
-        h = self.bottleneck(h2)
+        h = self.bottleneck(torch.cat([h2, text_cond], dim=-1))  # Add text conditioning
         
         # Upsampling with skip connections
         h = self.up1(torch.cat([h, h2], dim=-1))
