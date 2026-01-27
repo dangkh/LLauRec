@@ -16,6 +16,7 @@ import torch_geometric
 from common.abstract_recommender import GeneralRecommender
 from common.loss import BPRLoss, EmbLoss
 from common.init import xavier_uniform_initialization
+from diffusion import  ConditionalDDPM, ConditionalUNet
 
 class VLIF(GeneralRecommender):
     def __init__(self, config, dataset):
@@ -45,6 +46,7 @@ class VLIF(GeneralRecommender):
         self.t_preference = None
         self.dim_latent = 64
         self.mm_adj = None
+        self.numStep = config['num_diffusion_steps']
 
         dataset_path = os.path.abspath(config['data_path'] + config['dataset'])
         
@@ -104,6 +106,12 @@ class VLIF(GeneralRecommender):
         self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
                         num_layer=self.num_layer, has_feature=False, dropout=self.drop_rate, dim_latent=64,
                         device=self.device, features=self.id_embedding.weight)
+        self.unet = ConditionalUNet(
+            emb_dim=self.feat_embed_dim,
+            time_emb_dim=self.feat_embed_dim,
+            hidden_dim= self.feat_embed_dim * 2,
+            text_emb_dim= self.feat_embed_dim)
+        self.diffusion_model = ConditionalDDPM(self.unet, self.numStep)
 
 
     def get_knn_adj_mat(self, mm_embeddings):
@@ -159,7 +167,15 @@ class VLIF(GeneralRecommender):
 
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
-        user_rep = torch.cat((user_repT +  user_feat, user_repI ), dim=1)
+
+        self.lossD = self.diffusion_model.train_diff(user_repT, user_feat)
+        generated_cid = self.diffusion_model.sample(
+            text_emb=user_feat,
+            shape=user_feat.shape,
+            guidance_scale=2.0  # stronger guidance
+        )
+
+        user_rep = torch.cat((generated_cid, user_repI ), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]

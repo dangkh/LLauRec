@@ -112,7 +112,7 @@ class ConditionalDDPM:
     """
     Conditional Denoising Diffusion Probabilistic Model
     """
-    def __init__(self, model, T=1000, beta_start=1e-4, beta_end=0.02, device='cuda'):
+    def __init__(self, model, T=1000, beta_start=1e-4, beta_end=0.1, device='cuda'):
         self.model = model
         self.T = T
         self.device = device
@@ -214,15 +214,13 @@ class ConditionalDDPM:
         
         return x_t
     
-    def train_step(self, cid, temb, optimizer):
+    def train_diff(self, cid, temb):
         """
         Single training step
         
         Args:
             cid: target embedding to learn, shape [batch_size, emb_dim]
             temb: text embedding for conditioning, shape [batch_size, text_emb_dim]
-            optimizer: optimizer for model parameters
-        
         Returns:
             Loss value
         """
@@ -243,57 +241,53 @@ class ConditionalDDPM:
         # Compute loss (MSE between predicted and actual noise)
         loss = F.mse_loss(predicted_noise, noise)
         
-        # Backpropagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        return loss
         
-        return loss.item()
 
 
-# Example usage
-if __name__ == "__main__":
-    # Set device
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# # Example usage
+# if __name__ == "__main__":
+#     # Set device
+#     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    # Hyperparameters
-    emb_dim = 64  # dimension of cid
-    text_emb_dim = 384  # dimension of temb (e.g., from BERT/GPT)
-    batch_size = 16
-    T = 5  # number of diffusion steps
+#     # Hyperparameters
+#     emb_dim = 64  # dimension of cid
+#     text_emb_dim = 384  # dimension of temb (e.g., from BERT/GPT)
+#     batch_size = 16
+#     T = 5  # number of diffusion steps
     
-    # Initialize model
-    model = ConditionalUNet(
-        emb_dim=emb_dim,
-        time_emb_dim=128,
-        hidden_dim=256,
-        text_emb_dim=text_emb_dim
-    ).to(device)
+#     # Initialize model
+#     model = ConditionalUNet(
+#         emb_dim=emb_dim,
+#         time_emb_dim=128,
+#         hidden_dim=256,
+#         text_emb_dim=text_emb_dim
+#     ).to(device)
     
-    # Initialize diffusion process
-    ddpm = ConditionalDDPM(model, T=T, device=device)
+#     # Initialize diffusion process
+#     ddpm = ConditionalDDPM(model, T=T, device=device)
     
-    # Optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+#     # Optimizer
+#     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     
-    # Training example
-    print("Training example:")
-    for epoch in range(5):
-        # Dummy data
-        cid = torch.randn(batch_size, emb_dim).to(device)  # your embedding
-        temb = torch.randn(batch_size, text_emb_dim).to(device)  # text guidance
+#     # Training example
+#     print("Training example:")
+#     for epoch in range(5):
+#         # Dummy data
+#         cid = torch.randn(batch_size, emb_dim).to(device)  # your embedding
+#         temb = torch.randn(batch_size, text_emb_dim).to(device)  # text guidance
         
-        loss = ddpm.train_step(cid, temb, optimizer)
-        print(f"Epoch {epoch+1}, Loss: {loss:.4f}")
+#         loss = ddpm.train_diff(cid, temb)
+#         print(f"Epoch {epoch+1}, Loss: {loss:.4f}")
     
-    # Sampling example
-    print("\nSampling example:")
-    model.eval()
-    test_temb = torch.randn(4, text_emb_dim).to(device)
-    generated_cid = ddpm.sample(
-        text_emb=test_temb,
-        shape=(4, emb_dim),
-        guidance_scale=2.0  # stronger guidance
-    )
-    print(f"Generated embedding shape: {generated_cid.shape}")
-    print(f"Generated embedding stats - Mean: {generated_cid.mean():.4f}, Std: {generated_cid.std():.4f}")
+#     # Sampling example
+#     print("\nSampling example:")
+#     model.eval()
+#     test_temb = torch.randn(4, text_emb_dim).to(device)
+#     generated_cid = ddpm.sample(
+#         text_emb=test_temb,
+#         shape=(4, emb_dim),
+#         guidance_scale=2.0  # stronger guidance
+#     )
+#     print(f"Generated embedding shape: {generated_cid.shape}")
+#     print(f"Generated embedding stats - Mean: {generated_cid.mean():.4f}, Std: {generated_cid.std():.4f}")
