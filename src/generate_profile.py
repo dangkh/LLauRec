@@ -46,7 +46,7 @@ if __name__ == '__main__':
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
 	parser.add_argument("--shard", type=int, default=0)
 	parser.add_argument("--num_shards", type=int, default=1)
-	parser.add_argument("--out", type=str, default="out.jsonl")
+	parser.add_argument("--out", type=str, default="sample_user_profile.json")
 	args, _ = parser.parse_known_args()
 
 	# =========================
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 		"unsloth/orpheus-3b-0.1-ft-unsloth-bnb-4bit" # [NEW] We support TTS models!
 	] # More models at https://huggingface.co/unsloth
 
-	selected_model = "unsloth/Qwen3-14B"
+	selected_model = "unsloth/Qwen3-4B-Instruct-2507"
 	if args.tuning:
 		selected_model = f"./qwen4B_it_model_{args.dataset}"
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 	listUser = list(user_interactions.keys())
 	users = listUser[args.shard::args.num_shards]
 
-	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.LLM}_{args.shard}.json'
+	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.shard}.json'
 	if os.path.exists(user_profile_path):
 		with open(user_profile_path, 'r', encoding='utf-8') as f:
 			user_profiles = json.load(f)

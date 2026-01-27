@@ -148,8 +148,8 @@ class VLIF(GeneralRecommender):
         item_feat = self.mlp_item(self.t_feat)
         user_feat = F.normalize(self.mlp_user(self.user_feat))
         
-        self.t_rep, self.t_preference = self.t_gcn(self.edge_index_dropt, self.edge_index, item_feat)
-        self.id_rep, self.id_preference = self.id_gcn(self.edge_index_dropt, self.edge_index, self.id_embedding.weight)
+        self.t_rep, self.t_preference = self.t_gcn(self.edge_index, item_feat)
+        self.id_rep, self.id_preference = self.id_gcn(self.edge_index, self.id_embedding.weight)
 
         item_repT = self.t_rep[self.num_user:]
         item_repI = self.id_rep[self.num_user:]
@@ -213,7 +213,7 @@ class GCN(torch.nn.Module):
                 gain=1))
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
-    def forward(self, edge_index_drop,edge_index,features):
+    def forward(self,edge_index,features):
         temp_features = features
         temp_profile = self.preference
         x = torch.cat((temp_profile, temp_features), dim=0)
