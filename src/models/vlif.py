@@ -112,6 +112,7 @@ class VLIF(GeneralRecommender):
             hidden_dim= self.feat_embed_dim * 2,
             text_emb_dim= self.feat_embed_dim)
         self.diffusion_model = ConditionalDDPM(self.unet, self.numStep)
+        self.countE = 0
 
 
     def get_knn_adj_mat(self, mm_embeddings):
@@ -168,16 +169,16 @@ class VLIF(GeneralRecommender):
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
 
-        self.lossD = self.diffusion_model.train_diff(user_repT, user_feat)
+        self.lossD = self.diffusion_model.train_diff(user_feat, user_repT)
         generated_cid = self.diffusion_model.sample(
-            cid=user_repT,
-            text_emb=user_feat,
-            infer_step= 0,
-            shape=user_feat.shape,
-            guidance_scale=2.0  # stronger guidance
+            cid=user_feat,
+            text_emb=user_repT,
+            infer_step= 10,
+            shape=user_repT.shape,
+            guidance_scale=5.0  # stronger guidance
         )
 
-        user_rep = torch.cat((generated_cid, user_repI ), dim=1)
+        user_rep = torch.cat((user_repT + generated_cid, user_repI ), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]
@@ -188,10 +189,14 @@ class VLIF(GeneralRecommender):
         return pos_scores, neg_scores
 
     def calculate_loss(self, interaction):
+        ceoff = 0.5
+        if self.countE < 100:
+            ceoff = 1.0
+            self.countE += 1
         user = interaction[0]
         pos_scores, neg_scores = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
-        return loss_value 
+        return loss_value + ceoff * self.lossD
 
     def full_sort_predict(self, interaction):
         user_tensor = self.result_embed[:self.n_users]

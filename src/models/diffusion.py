@@ -25,7 +25,7 @@ class ConditionalUNet(nn.Module):
     Simple U-Net style model for conditional diffusion
     Uses temb (text embedding) as guidance signal
     """
-    def __init__(self, emb_dim, time_emb_dim=128, hidden_dim=256, text_emb_dim=None):
+    def __init__(self, emb_dim, time_emb_dim=8, hidden_dim=64, text_emb_dim=None):
         super().__init__()
         
         if text_emb_dim is None:
@@ -112,7 +112,7 @@ class ConditionalDDPM:
     """
     Conditional Denoising Diffusion Probabilistic Model
     """
-    def __init__(self, model, T=1000, beta_start=1e-4, beta_end=0.1, device='cuda'):
+    def __init__(self, model, T=10, beta_start=1e-4, beta_end=0.001, device='cuda'):
         self.model = model
         self.T = T
         self.device = device
