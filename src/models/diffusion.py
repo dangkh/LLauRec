@@ -25,7 +25,7 @@ class ConditionalUNet(nn.Module):
     Simple U-Net style model for conditional diffusion
     Uses temb (text embedding) as guidance signal
     """
-    def __init__(self, emb_dim, time_emb_dim=8, hidden_dim=64, text_emb_dim=None):
+    def __init__(self, emb_dim, time_emb_dim=16, hidden_dim=64, text_emb_dim=None):
         super().__init__()
         
         if text_emb_dim is None:
@@ -35,49 +35,70 @@ class ConditionalUNet(nn.Module):
         self.time_mlp = nn.Sequential(
             SinusoidalPositionEmbeddings(time_emb_dim),
             nn.Linear(time_emb_dim, time_emb_dim * 4),
+            nn.LayerNorm(time_emb_dim * 4),
             nn.GELU(),
-            nn.Linear(time_emb_dim * 4, time_emb_dim)
+            nn.Linear(time_emb_dim * 4, time_emb_dim),
+            nn.LayerNorm(time_emb_dim)
         )
         
-        # Text conditioning
+        # Text conditioning projection
         self.text_proj = nn.Sequential(
             nn.Linear(text_emb_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.GELU(),
-            nn.Linear(hidden_dim, hidden_dim)
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim)
         )
         
-        # Down blocks
+        # Down blocks (encoder)
         self.down1 = nn.Sequential(
-            nn.Linear(emb_dim + hidden_dim, hidden_dim),  # Added text conditioning
+            nn.Linear(emb_dim + hidden_dim, hidden_dim),  # Input + text
+            nn.LayerNorm(hidden_dim),
             nn.GELU()
         )
         
         self.down2 = nn.Sequential(
-            nn.Linear(hidden_dim + time_emb_dim + hidden_dim, hidden_dim * 2),
+            nn.Linear(hidden_dim + time_emb_dim + hidden_dim, hidden_dim * 2),  # h1 + time + text
+            nn.LayerNorm(hidden_dim * 2),
             nn.GELU()
         )
         
-        # Bottleneck
+        # Bottleneck (MUST have text conditioning)
         self.bottleneck = nn.Sequential(
-            nn.Linear(hidden_dim * 2 + hidden_dim, hidden_dim * 2),  # Added text conditioning
+            nn.Linear(hidden_dim * 2 + hidden_dim, hidden_dim * 2),  # h2 + text ✓
+            nn.LayerNorm(hidden_dim * 2),
             nn.GELU(),
             nn.Linear(hidden_dim * 2, hidden_dim * 2),
+            nn.LayerNorm(hidden_dim * 2),
             nn.GELU()
         )
         
-        # Up blocks
+        # Up blocks (decoder) - CORRECTED: Now with text conditioning!
         self.up1 = nn.Sequential(
-            nn.Linear(hidden_dim * 2 + hidden_dim * 2, hidden_dim),
+            nn.Linear(hidden_dim * 2 + hidden_dim * 2 + hidden_dim, hidden_dim),  # bottleneck + h2 + text ✓
+            nn.LayerNorm(hidden_dim),
             nn.GELU()
         )
         
         self.up2 = nn.Sequential(
-            nn.Linear(hidden_dim + hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim + hidden_dim + hidden_dim, hidden_dim),  # up1 + h1 + text ✓
+            nn.LayerNorm(hidden_dim),
             nn.GELU()
         )
         
         # Output
         self.out = nn.Linear(hidden_dim, emb_dim)
+        
+        # Initialize weights
+        self._initialize_weights()
+    
+    def _initialize_weights(self):
+        """Proper weight initialization"""
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight, gain=0.5)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
     
     def forward(self, x, t, text_emb):
         """
@@ -86,25 +107,28 @@ class ConditionalUNet(nn.Module):
             t: timestep, shape [batch_size]
             text_emb: text embedding for guidance, shape [batch_size, text_emb_dim]
         """
-        # Get time and text embeddings
+        # Get embeddings
         t_emb = self.time_mlp(t)
         text_cond = self.text_proj(text_emb)
         
-        # Downsampling with conditioning
-        h1 = self.down1(torch.cat([x, text_cond], dim=-1))  # Add text conditioning to input
+        # ============================================
+        # ENCODER (Downsampling)
+        # ============================================
+        h1 = self.down1(torch.cat([x, text_cond], dim=-1))
+        h2 = self.down2(torch.cat([h1, t_emb, text_cond], dim=-1))
         
-        # Concatenate with time and text conditioning
-        h1_cond = torch.cat([h1, t_emb, text_cond], dim=-1)
-        h2 = self.down2(h1_cond)
+        # ============================================
+        # BOTTLENECK (with text conditioning)
+        # ============================================
+        h = self.bottleneck(torch.cat([h2, text_cond], dim=-1))
         
-        # Bottleneck
-        h = self.bottleneck(torch.cat([h2, text_cond], dim=-1))  # Add text conditioning
+        # ============================================
+        # DECODER (Upsampling) - NOW WITH TEXT CONDITIONING!
+        # ============================================
+        h = self.up1(torch.cat([h, h2, text_cond], dim=-1))  # ✓ Added text_cond
+        h = self.up2(torch.cat([h, h1, text_cond], dim=-1))  # ✓ Added text_cond
         
-        # Upsampling with skip connections
-        h = self.up1(torch.cat([h, h2], dim=-1))
-        h = self.up2(torch.cat([h, h1], dim=-1))
-        
-        # Output noise prediction
+        # Output
         return self.out(h)
 
 
