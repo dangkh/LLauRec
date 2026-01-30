@@ -16,7 +16,7 @@ import torch_geometric
 from common.abstract_recommender import GeneralRecommender
 from common.loss import BPRLoss, EmbLoss
 from common.init import xavier_uniform_initialization
-from diffusion import  ConditionalDDPM, ConditionalUNet
+from .diffusion import  ConditionalDDPM, ConditionalUNet
 
 class VLIF(GeneralRecommender):
     def __init__(self, config, dataset):
@@ -170,7 +170,9 @@ class VLIF(GeneralRecommender):
 
         self.lossD = self.diffusion_model.train_diff(user_repT, user_feat)
         generated_cid = self.diffusion_model.sample(
+            cid=user_repT,
             text_emb=user_feat,
+            infer_step= 0,
             shape=user_feat.shape,
             guidance_scale=2.0  # stronger guidance
         )

@@ -150,7 +150,7 @@ class ConditionalDDPM:
         
         return sqrt_alphas_cumprod_t * x_0 + sqrt_one_minus_alphas_cumprod_t * noise
     
-    def p_sample(self, x_t, t, text_emb, guidance_scale=1.0):
+    def p_sample(self, x_t, t, text_emb, guidance_scale=1.0, sample_noise=True):
         """
         Reverse diffusion process: denoise x_t to get x_{t-1}
         
@@ -182,7 +182,7 @@ class ConditionalDDPM:
             x_t - betas_t * predicted_noise / sqrt_one_minus_alphas_cumprod_t
         )
         
-        if t[0] == 0:
+        if sample_noise is False or t[0] == 0:
             return model_mean
         else:
             posterior_variance_t = self.posterior_variance[t][:, None]
@@ -190,7 +190,7 @@ class ConditionalDDPM:
             return model_mean + torch.sqrt(posterior_variance_t) * noise
     
     @torch.no_grad()
-    def sample(self, text_emb, shape, guidance_scale=1.0):
+    def sample(self, cid, text_emb, infer_step, shape, guidance_scale=1.0):
         """
         Generate samples using reverse diffusion process
         
@@ -205,7 +205,12 @@ class ConditionalDDPM:
         batch_size = shape[0]
         
         # Start from pure noise
-        x_t = torch.randn(shape).to(self.device)
+        if infer_step == 0:
+            x_t = cid
+        else:
+            t = torch.tensor([infer_step - 1] * cid.shape[0]).to(self.device)
+            noise = torch.randn_like(cid)
+            x_t = self.q_sample(cid, t, noise)
         
         # Reverse diffusion process
         for i in reversed(range(self.T)):
