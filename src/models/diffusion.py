@@ -34,20 +34,16 @@ class ConditionalUNet(nn.Module):
         # Time embedding
         self.time_mlp = nn.Sequential(
             SinusoidalPositionEmbeddings(time_emb_dim),
-            nn.Linear(time_emb_dim, time_emb_dim * 4),
-            nn.LayerNorm(time_emb_dim * 4),
-            nn.GELU(),
-            nn.Linear(time_emb_dim * 4, time_emb_dim),
-            nn.LayerNorm(time_emb_dim)
+            nn.Linear(time_emb_dim, time_emb_dim),
+            nn.LayerNorm(time_emb_dim),
+            nn.GELU()
         )
         
         # Text conditioning projection
         self.text_proj = nn.Sequential(
             nn.Linear(text_emb_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
-            nn.GELU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim)
+            nn.GELU()
         )
         
         # Down blocks (encoder)
@@ -66,9 +62,6 @@ class ConditionalUNet(nn.Module):
         # Bottleneck (MUST have text conditioning)
         self.bottleneck = nn.Sequential(
             nn.Linear(hidden_dim * 2 + hidden_dim, hidden_dim * 2),  # h2 + text ✓
-            nn.LayerNorm(hidden_dim * 2),
-            nn.GELU(),
-            nn.Linear(hidden_dim * 2, hidden_dim * 2),
             nn.LayerNorm(hidden_dim * 2),
             nn.GELU()
         )
@@ -136,7 +129,7 @@ class ConditionalDDPM:
     """
     Conditional Denoising Diffusion Probabilistic Model
     """
-    def __init__(self, model, T=10, beta_start=1e-4, beta_end=0.001, device='cuda'):
+    def __init__(self, model, T=10, beta_start=1e-4, beta_end=0.002, device='cuda'):
         self.model = model
         self.T = T
         self.device = device

@@ -173,7 +173,7 @@ class VLIF(GeneralRecommender):
         generated_cid = self.diffusion_model.sample(
             cid=user_feat,
             text_emb=user_repT,
-            infer_step= 10,
+            infer_step= 1,
             shape=user_repT.shape,
             guidance_scale=5.0  # stronger guidance
         )
