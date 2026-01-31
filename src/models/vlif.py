@@ -47,6 +47,7 @@ class VLIF(GeneralRecommender):
         self.dim_latent = 64
         self.mm_adj = None
         self.numStep = config['num_diffusion_steps']
+        self.config = config
 
         dataset_path = os.path.abspath(config['data_path'] + config['dataset'])
         
@@ -106,13 +107,23 @@ class VLIF(GeneralRecommender):
         self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
                         num_layer=self.num_layer, has_feature=False, dropout=self.drop_rate, dim_latent=64,
                         device=self.device, features=self.id_embedding.weight)
-        self.unet = ConditionalUNet(
-            emb_dim=self.feat_embed_dim,
-            time_emb_dim=self.feat_embed_dim,
-            hidden_dim= self.feat_embed_dim * 2,
-            text_emb_dim= self.feat_embed_dim)
-        self.diffusion_model = ConditionalDDPM(self.unet, self.numStep)
-        self.countE = 0
+        if config['fusion'] == 'diffusion':
+            self.unet = ConditionalUNet(
+                emb_dim=self.feat_embed_dim,
+                time_emb_dim=self.feat_embed_dim,
+                hidden_dim= self.feat_embed_dim * 2,
+                text_emb_dim= self.feat_embed_dim)
+            self.diffusion_model = ConditionalDDPM(self.unet, self.numStep)
+            self.countE = 0
+        elif config['fusion'] == 'add':
+            pass
+        elif config['fusion'] == 'Multi-Head Attention':
+            pass
+        elif config['fusion'] == 'Transformer':
+            pass
+        else:
+            raise NotImplementedError
+        
 
 
     def get_knn_adj_mat(self, mm_embeddings):
@@ -169,16 +180,23 @@ class VLIF(GeneralRecommender):
         user_repT = self.t_rep[:self.num_user]
         user_repI = self.id_rep[:self.num_user]
 
-        self.lossD = self.diffusion_model.train_diff(user_feat, user_repT)
-        generated_cid = self.diffusion_model.sample(
-            cid=user_feat,
-            text_emb=user_repT,
-            infer_step= 1,
-            shape=user_repT.shape,
-            guidance_scale=5.0  # stronger guidance
-        )
-
-        user_rep = torch.cat((user_repT + generated_cid, user_repI ), dim=1)
+        if self.config['fusion'] == 'diffusion':
+            self.lossD = self.diffusion_model.train_diff(user_feat, user_repT)
+            generated_cid = self.diffusion_model.sample(
+                cid=user_feat,
+                text_emb=user_repT,
+                infer_step= 1,
+                shape=user_repT.shape,
+                guidance_scale=5.0  # stronger guidance
+            )
+            userRepT = user_repT + generated_cid
+        elif self.config['fusion'] == 'add':
+            userRepT = user_repT + user_feat
+        elif self.config['fusion'] == 'Multi-Head Attention':
+            pass
+        elif self.config['fusion'] == 'Transformer':
+            pass
+        user_rep = torch.cat((userRepT, user_repI), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
         user_tensor = self.result_embed[user_nodes]

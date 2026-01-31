@@ -25,6 +25,7 @@ if __name__ == '__main__':
 	parser.add_argument("--tuning", '-t', type=bool, default=False, help='encoding tuning user profile or not')
 	parser.add_argument("--item_profile",'-i', type=bool, default=False, help='whether to use item profile or not')
 	parser.add_argument("--export_tuning",'-e', type=bool, default=False, help='whether to export tuning data or not')
+	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
 	args, _ = parser.parse_known_args()
 	if args.user:
 		dir = f'./data/{args.dataset}/'
@@ -231,7 +232,9 @@ if __name__ == '__main__':
 					itemInfo = ""
 					for item in interacted:
 						title, description = itemDesc[item]
-						tmp = f"Title: {title}\nDescription: {description}\n\n"
+						if args.prompt_profile is True:
+							choose_def = f"Description: {description}\n"
+						tmp = f"Title: {title}\n{choose_def}\n"
 						itemInfo += tmp
 
 					candidates = item_kitem[ground_truth]
@@ -246,17 +249,21 @@ if __name__ == '__main__':
 					candidateInfo = ""
 					for c in listC:
 						title, description = itemDesc[c]
-						tmp = f"Title: {title}\nDescription: {description}\n\n"
+						if args.prompt_profile is True:
+							choose_def = f"Description: {description}\n"
+						tmp = f"Title: {title}\n{choose_def}\n"
 						candidateInfo += tmp
 
 					userprompt = tun_prompt.format(itemInfo, candidateInfo)
-					answer = f"{itemDesc[ground_truth][1]}"
+					answer = f"{itemDesc[ground_truth][0]}"
 					sys_prompt = sys_prompt1
 				else:
 					itemInfo = "The user has purchased: \n"
 					for item in selected:
 						title, description = itemDesc[item]
-						tmp = f"Title: {title}\nDescription: {description}\n\n"
+						if args.prompt_profile is True:
+							choose_def = f"Description: {description}\n"
+						tmp = f"Title: {title}\n{choose_def}\n"
 						itemInfo += tmp
 					sys_prompt = sys_prompt2
 					answer = str(sampleUser[str(uid)])
@@ -270,6 +277,6 @@ if __name__ == '__main__':
 
 			
 			dataset = Dataset.from_list(dataset)
-			dataset.to_json(f"./data/{args.dataset}/tuningData.jsonl")
+			dataset.to_json(f"./data/{args.dataset}/{args.prompt_profile}_tuningData.jsonl")
 			# stat for candidate
 			print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))	
