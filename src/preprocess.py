@@ -22,7 +22,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument("--user", '-u', type=bool, default=False, help='encoding user profile or not')
-	parser.add_argument("--tuning", '-t', type=bool, default=False, help='encoding tuning user profile or not')
+	parser.add_argument("--tuning", '-t', type=bool, default=False, help='using tuned LLM to encode user profile or not')
 	parser.add_argument("--item_profile",'-i', type=bool, default=False, help='whether to use item profile or not')
 	parser.add_argument("--export_tuning",'-e', type=bool, default=False, help='whether to export tuning data or not')
 	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
@@ -219,7 +219,7 @@ if __name__ == '__main__':
 			tuningP, systemP1, systemP2 = "tuning", "sys", "user"
 			if args.prompt_candidate:
 				tuningP, systemP1, systemP2 = "tuning_candidate", "sys_candidate", "user"
-			tun_prompt = all_prompts[tuningP]
+			tun_prompt = all_prompts[args.dataset][tuningP]
 			sys_prompt1 = all_prompts[args.dataset][systemP1]
 			sys_prompt2 = all_prompts[args.dataset][systemP2]
 
@@ -237,6 +237,7 @@ if __name__ == '__main__':
 					itemInfo = ""
 					for item in interacted:
 						title, description = itemDesc[item]
+						choose_def = ""
 						if args.prompt_profile is True:
 							choose_def = f"Description: {description}\n"
 						tmp = f"Title: {title}\n{choose_def}\n"
@@ -254,6 +255,7 @@ if __name__ == '__main__':
 					candidateInfo = ""
 					for c in listC:
 						title, description = itemDesc[c]
+						choose_def = ""
 						if args.prompt_profile is True:
 							choose_def = f"Description: {description}\n"
 						tmp = f"Title: {title}\n{choose_def}\n"
@@ -266,6 +268,7 @@ if __name__ == '__main__':
 					itemInfo = "The user has purchased: \n"
 					for item in selected:
 						title, description = itemDesc[item]
+						choose_def = ""
 						if args.prompt_profile is True:
 							choose_def = f"Description: {description}\n"
 						tmp = f"Title: {title}\n{choose_def}\n"
