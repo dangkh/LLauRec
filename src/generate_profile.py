@@ -47,6 +47,8 @@ if __name__ == '__main__':
 	parser.add_argument("--shard", type=int, default=0)
 	parser.add_argument("--num_shards", type=int, default=1)
 	parser.add_argument("--out", type=str, default="sample_user_profile.json")
+	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
+	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=False, help='use candidate prompt or not')
 	args, _ = parser.parse_known_args()
 
 	# =========================

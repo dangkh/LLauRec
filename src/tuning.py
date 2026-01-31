@@ -32,6 +32,8 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
+	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
+	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=False, help='use candidate prompt or not')
 	args, _ = parser.parse_known_args()
 
 
@@ -76,10 +78,14 @@ if __name__ == '__main__':
 	)
 	with open("src/prompts.yaml", "r") as f:
 		all_prompts = yaml.safe_load(f)
-	tun_prompt = all_prompts[args.dataset]['tuning']
-	sys_prompt = all_prompts[args.dataset]['sys']
 
-	dataPath = f"./data/{args.dataset}/tuningData.jsonl"
+	tuningP, systemP1, systemP2 = "tuning", "sys", "user"
+	if args.prompt_candidate:
+		tuningP, systemP1, systemP2 = "tuning_candidate", "sys_candidate", "user"
+	tun_prompt = all_prompts[args.dataset][tuningP]
+	sys_prompt = all_prompts[args.dataset][systemP1]
+	
+	dataPath = f"./data/{args.dataset}/candidate_{args.prompt_candidate}_profile_{args.prompt_profile}_tuningData.jsonl"
 	dataset = load_dataset("json", data_files=dataPath)
 	datalist = []
 	for sample in dataset['train']:

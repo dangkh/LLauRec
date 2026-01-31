@@ -26,6 +26,7 @@ if __name__ == '__main__':
 	parser.add_argument("--item_profile",'-i', type=bool, default=False, help='whether to use item profile or not')
 	parser.add_argument("--export_tuning",'-e', type=bool, default=False, help='whether to export tuning data or not')
 	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
+	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=False, help='use candidate prompt or not')
 	args, _ = parser.parse_known_args()
 	if args.user:
 		dir = f'./data/{args.dataset}/'
@@ -214,9 +215,13 @@ if __name__ == '__main__':
 		if args.export_tuning:
 			with open("src/prompts.yaml", "r") as f:
 				all_prompts = yaml.safe_load(f)
-			tun_prompt = all_prompts['tuning']
-			sys_prompt1 = all_prompts[args.dataset]['sys']
-			sys_prompt2 = all_prompts[args.dataset]['user']
+			
+			tuningP, systemP1, systemP2 = "tuning", "sys", "user"
+			if args.prompt_candidate:
+				tuningP, systemP1, systemP2 = "tuning_candidate", "sys_candidate", "user"
+			tun_prompt = all_prompts[tuningP]
+			sys_prompt1 = all_prompts[args.dataset][systemP1]
+			sys_prompt2 = all_prompts[args.dataset][systemP2]
 
 			with open(f"./data/{args.dataset}/sample_user_profile.json", 'r', encoding='utf-8') as f:
 				sampleUser = json.load(f)
@@ -277,6 +282,6 @@ if __name__ == '__main__':
 
 			
 			dataset = Dataset.from_list(dataset)
-			dataset.to_json(f"./data/{args.dataset}/{args.prompt_profile}_tuningData.jsonl")
+			dataset.to_json(f"./data/{args.dataset}/candidate_{args.prompt_candidate}_profile_{args.prompt_profile}_tuningData.jsonl")
 			# stat for candidate
 			print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))	
