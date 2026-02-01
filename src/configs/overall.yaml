@@ -1,7 +1,6 @@
 # general
 gpu_id: 4
 use_gpu: True
-seed: [999]
 
 # multi-modal raw features
 data_path: 'data/'
@@ -47,5 +46,5 @@ n_mm_layers: [1, 2]
 learning_rate: [0.0001]
 reg_weight: [0.01]
 seed: [1009, 1107, 1210, 1104]
-fusion: ["diffusion", "add", "Multi-Head Attention", "Transformer"]
+fusion: ["diffusion", "add", "pool", "Multi-Head Attention", "Transformer"]
 hyper_parameters: ["seed", "fusion", "mm_image_weight", "k", "n_mm_layers", "knn_k", "aggr_mode", "reg_weight", "learning_rate"]

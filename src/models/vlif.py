@@ -16,7 +16,9 @@ import torch_geometric
 from common.abstract_recommender import GeneralRecommender
 from common.loss import BPRLoss, EmbLoss
 from common.init import xavier_uniform_initialization
+from torch.nn import MultiheadAttention
 from .diffusion import  ConditionalDDPM, ConditionalUNet
+from .transformer import TransformerEncoder
 
 class VLIF(GeneralRecommender):
     def __init__(self, config, dataset):
@@ -118,9 +120,9 @@ class VLIF(GeneralRecommender):
         elif config['fusion'] == 'add':
             pass
         elif config['fusion'] == 'Multi-Head Attention':
-            pass
+            self.multihead_attn = nn.MultiheadAttention(embed_dim=64, num_heads=4)
         elif config['fusion'] == 'Transformer':
-            pass
+            self.transformer = TransformerEncoder(64, num_heads= 4, layers=2)
         else:
             raise NotImplementedError
         
@@ -192,10 +194,14 @@ class VLIF(GeneralRecommender):
             userRepT = user_repT + generated_cid
         elif self.config['fusion'] == 'add':
             userRepT = user_repT + user_feat
+        elif self.config['fusion'] == 'pool':
+            userRepT = (user_repT + user_feat) / 2
         elif self.config['fusion'] == 'Multi-Head Attention':
-            pass
+            userRepT, _ = self.multihead_attn(user_feat.unsqueeze(0), user_repT.unsqueeze(0), user_repT.unsqueeze(0))
         elif self.config['fusion'] == 'Transformer':
-            pass
+            userRepT = self.transformer(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0)).squeeze(0)
+        else:
+            raise NotImplementedError
         user_rep = torch.cat((userRepT, user_repI), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
