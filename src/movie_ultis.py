@@ -41,5 +41,7 @@ print(metaDF.columns.to_list())
 print(metaDF.head())
 metaDF['profile'] = metaDF['description']
 metaDF['text_feat'] = metaDF["title"] + ' ' + metaDF["description"]
-save_path = os.path.join(data_dir, 'item_meta.csv')
+metaDF['asin'] = metaDF.index.astype(str)
+# save to csv
+save_path = os.path.join(data_dir, 'fullMeta_movie.csv')
 metaDF.to_csv(save_path)

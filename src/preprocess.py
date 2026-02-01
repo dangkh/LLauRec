@@ -203,7 +203,7 @@ if __name__ == '__main__':
 			merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['profile']
 		else:
 			# load meta data directly at item_meta.csv
-			metapath = os.path.join(dir, f'item_meta.csv')
+			metapath = os.path.join(dir, f'fullMeta_movie.csv')
 			merged_df = pd.read_csv(metapath)
 
 		if args.export_item or (not os.path.exists(os.path.join(dir, f'text_feat.npy'))):
