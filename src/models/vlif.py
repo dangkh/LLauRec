@@ -54,8 +54,8 @@ class VLIF(GeneralRecommender):
         self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
         self.userMLP = nn.Linear(self.user_feat.shape[1], self.feat_embed_dim)
         self.itemMLP = nn.Linear(self.t_feat.shape[1], self.feat_embed_dim)
-        self.item_itemMLP = nn.Linear(self.feat_embed_dim, self.feat_embed_dim)
-        self.user_userMLP = nn.Linear(self.feat_embed_dim, self.feat_embed_dim)
+        self.item_itemMLP = nn.Linear(self.feat_embed_dim * 2, self.feat_embed_dim)
+        self.user_userMLP = nn.Linear(self.feat_embed_dim * 2, self.feat_embed_dim)
         indices, text_adj = self.get_knn_adj_mat(self.t_feat)
         self.mm_adj = text_adj
 
