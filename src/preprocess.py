@@ -23,11 +23,13 @@ if __name__ == '__main__':
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument("--user", '-u', type=bool, default=False, help='encoding user profile or not')
 	parser.add_argument("--tuning", '-t', type=bool, default=False, help='using tuned LLM to encode user profile or not')
-	parser.add_argument("--item_profile",'-i', type=bool, default=False, help='whether to use item profile or not')
-	parser.add_argument("--export_tuning",'-e', type=bool, default=False, help='whether to export tuning data or not')
+	parser.add_argument("--item_profile",'-i', type=bool, default=True, help='whether to use item profile or not')
+	parser.add_argument("--export_tuning",'-e', type=bool, default=True, help='whether to export tuning data or not')
+	parser.add_argument("--export_item", '-ei', type=bool, default=False, help='whether to export item data or not')
 	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
-	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=False, help='use candidate prompt or not')
+	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=True, help='use candidate prompt or not')
 	args, _ = parser.parse_known_args()
+	print(args)
 	if args.user:
 		dir = f'./data/{args.dataset}/'
 		# =========================
@@ -195,14 +197,16 @@ if __name__ == '__main__':
 
 		# create new column with combine title and description
 		merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['profile']
-
-		if args.item_profile:
-			# save prf embeddings as .npy in the order of itemID
-			text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
-		else:	
-			# encode text_feat to embeddings and save as .npy
-			text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
-		
+		if args.export_item:
+			if args.item_profile:
+				# save prf embeddings as .npy in the order of itemID
+				text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
+			else:	
+				# encode text_feat to embeddings and save as .npy
+				text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
+		else:
+			# load existing text_feat embeddings
+			text_embeddings = np.load(os.path.join(dir, f'text_feat.npy'))
 		top_k = 10
 		item_kitem = build_item_item_knn(text_embeddings, top_k=top_k)
 		item_item_path = f'./data/{args.dataset}/item_top{top_k}item.npy'
@@ -253,6 +257,9 @@ if __name__ == '__main__':
 					listC = listC[:3]
 					checkarray.append(len(listC))
 					candidateInfo = ""
+					# must add ground_truth to candidates
+					listC.append(ground_truth)
+					random.shuffle(listC)
 					for c in listC:
 						title, description = itemDesc[c]
 						choose_def = ""
@@ -260,7 +267,7 @@ if __name__ == '__main__':
 							choose_def = f"Description: {description}\n"
 						tmp = f"Title: {title}\n{choose_def}\n"
 						candidateInfo += tmp
-
+					
 					userprompt = tun_prompt.format(itemInfo, candidateInfo)
 					answer = f"{itemDesc[ground_truth][0]}"
 					sys_prompt = sys_prompt1
@@ -278,7 +285,7 @@ if __name__ == '__main__':
 
 
 				dataset.append({
-					"userprompt": itemInfo,
+					"userprompt": candidateInfo,
 					"systemprompt": sys_prompt,
 					"answer": answer
 				})

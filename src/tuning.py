@@ -33,9 +33,9 @@ if __name__ == '__main__':
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
 	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
-	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=False, help='use candidate prompt or not')
+	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=True, help='use candidate prompt or not')
 	args, _ = parser.parse_known_args()
-
+	print(args)
 
 	fourbit_models = [
 		"unsloth/Qwen3-4B-Instruct-2507-unsloth-bnb-4bit", # Qwen 14B 2x faster
