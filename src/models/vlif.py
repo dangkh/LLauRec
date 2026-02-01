@@ -197,7 +197,8 @@ class VLIF(GeneralRecommender):
         elif self.config['fusion'] == 'pool':
             userRepT = (user_repT + user_feat) / 2
         elif self.config['fusion'] == 'Multi-Head Attention':
-            userRepT, _ = self.multihead_attn(user_feat.unsqueeze(0), user_repT.unsqueeze(0), user_repT.unsqueeze(0))
+            userRepT, _ = self.multihead_attn(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0))
+            userRepT = userRepT.squeeze(0)
         elif self.config['fusion'] == 'Transformer':
             userRepT = self.transformer(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0)).squeeze(0)
         else:
@@ -213,14 +214,15 @@ class VLIF(GeneralRecommender):
         return pos_scores, neg_scores
 
     def calculate_loss(self, interaction):
-        ceoff = 0.5
-        if self.countE < 100:
-            ceoff = 1.0
-            self.countE += 1
-        user = interaction[0]
         pos_scores, neg_scores = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
-        return loss_value + ceoff * self.lossD
+        if self.config['fusion'] == 'diffusion':
+            ceoff = 0.5
+            if self.countE < 100:
+                ceoff = 1.0
+                self.countE += 1
+            return loss_value + ceoff * self.lossD
+        return loss_value
 
     def full_sort_predict(self, interaction):
         user_tensor = self.result_embed[:self.n_users]
