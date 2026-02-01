@@ -272,7 +272,7 @@ if __name__ == '__main__':
 					answer = f"{itemDesc[ground_truth][0]}"
 					sys_prompt = sys_prompt1
 				else:
-					itemInfo = "The user has purchased: \n"
+					itemInfo = ""
 					for item in selected:
 						title, description = itemDesc[item]
 						choose_def = ""
@@ -280,12 +280,13 @@ if __name__ == '__main__':
 							choose_def = f"Description: {description}\n"
 						tmp = f"Title: {title}\n{choose_def}\n"
 						itemInfo += tmp
+					userprompt = tun_prompt.format(itemInfo, "")
 					sys_prompt = sys_prompt2
 					answer = str(sampleUser[str(uid)])
 
 
 				dataset.append({
-					"userprompt": candidateInfo,
+					"userprompt": userprompt,
 					"systemprompt": sys_prompt,
 					"answer": answer
 				})
