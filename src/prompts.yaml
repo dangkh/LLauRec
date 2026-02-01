@@ -143,3 +143,73 @@ yelp:
     {}
 
     Now, provide the next business that the user is most likely to visit next.
+
+movie:
+  sys_candidate: |
+    You will serve as an assistant to help me determine which types of movie a specific user is likely to enjoy.
+    I will provide you with information about movies that the user has purchased, as well as a list of movies that they may choose to buy next.
+    Here are the instructions:
+      1. Each purchased movie will be described in JSON format, with the following attributes:
+      {{
+          "title": "the name of the movie", (if there is no title, I will set this value to "None" or "nan")
+          "description": "a description of what types of users will like this movie",
+      }}
+
+      2. The information I will give you:
+      PURCHASED ITEMS: a list of JSON strings describing the items that the user has purchased.
+      CANDIDATE ITEMS: a list of JSON strings describing the candidate items that the user may buy next.
+
+    Requirements:
+      1. Based on the PURCHASED ITEMS, summarize what types of movies this user is likely to enjoy
+      2. Based on the summarization of user favorite, PROVIDE the most suitable candidate item for the user that they may choose to buy next.
+  sys: |
+    You will serve as an assistant to help me determine which types of movies a specific user is likely to enjoy.
+    I will provide you with information about movies that the user has purchased, as well as a list of movies that they may choose to buy next.
+    Here are the instructions:
+      1. Each purchased movie will be described in JSON format, with the following attributes:
+      {{
+          "title": "the name of the movie", (if there is no title, I will set this value to "None" or "nan")
+          "description": "a description of what types of users will like this movie",
+      }}
+
+      2. The information I will give you:
+      PURCHASED ITEMS: a list of JSON strings describing the items that the user has purchased.
+
+    Requirements:
+      1. Based on the PURCHASED ITEMS, summarize what types of movies this user is likely to enjoy
+      2. Based on the summarization of user favorite, PROVIDE the most suitable item for the user that they may choose to buy next.
+  user: |
+    You will serve as an assistant to help me determine which types of movies a specific user is likely to enjoy.
+    I will provide you with information about movies that the user has purchased.
+    Here are the instructions:
+      1. Each purchased movie will be described in JSON format, with the following attributes:
+      {{
+          "title": "the name of the movie", (if there is no title, I will set this value to "None" or "nan")
+          "description": "a description of what types of users will like this movie",
+      }}
+
+      2. The information I will give you:
+      PURCHASED ITEMS: a list of JSON strings describing the items that the user has purchased.
+
+    Requirements:
+      1. Please provide information of user in JSON format, following this structure:
+      {{
+          "summarization": "A summarization of what types of movies this user is likely to enjoy" 
+          "reasoning": "briefly explain your reasoning for the summarization"
+      }}
+      2. Please ensure that the "summarization" is no longer than 150 words.
+      3. The "reasoning" has no word limits.
+      4. Do not provided any other text outside the JSON string.
+  tuning_candidate: |
+    User purchased movies are: 
+    {}
+
+    The list candidates are:
+    {}
+
+    Now, provide the next movie that the user is most likely to buy next.
+  tuning: |
+    User purchased movies are: 
+    {}
+
+    Now, provide the next movie that the user is most likely to buy next.

@@ -85,7 +85,7 @@ def getUser_Interaction(interDF):
 def get_itemDesc(metaDF, merge=True):
 	itemDesc = []
 	for idx, row in tqdm(metaDF.iterrows(), total=metaDF.shape[0]):
-		iid = row['iid']
+		# iid = row['iid']
 		title = row['title']
 		description = row['profile']
 		if merge:
