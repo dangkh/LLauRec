@@ -52,7 +52,6 @@ class VLIF(GeneralRecommender):
         mm_adj_file = os.path.join(dataset_path, 'mm_adj_{}.pt'.format(self.knn_k))
 
         self.id_embedding = nn.Embedding(num_item, self.feat_embed_dim)
-        self.idUser_embedding = nn.Embedding(num_user, self.feat_embed_dim)
         self.userMLP = nn.Linear(self.user_feat.shape[1], self.feat_embed_dim)
         self.itemMLP = nn.Linear(self.t_feat.shape[1], self.feat_embed_dim)
 
@@ -111,7 +110,7 @@ class VLIF(GeneralRecommender):
                             device=self.device, features=self.t_feat, user_profile=self.user_feat)
         self.id_gcn = GCN(self.dataset, batch_size, num_user, num_item, dim_x, self.aggr_mode,
                         num_layer=self.num_layer, has_feature=False, dropout=self.drop_rate, dim_latent=64,
-                        device=self.device, features=self.id_embedding.weight, user_profile=self.idUser_embedding.weight)
+                        device=self.device, features=self.id_embedding.weight)
 
 
     def get_knn_adj_mat(self, mm_embeddings):
@@ -216,26 +215,27 @@ class GCN(torch.nn.Module):
 
         if self.has_feature:
             self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
-                np.random.randn(num_item, self.dim_latent), dtype=torch.float32, requires_grad=True),
+                np.random.randn(num_user, self.dim_latent - self.dim_user), dtype=torch.float32, requires_grad=True),
                 gain=1).to(self.device))
             self.MLP = nn.Linear(self.dim_feat, self.dim_latent)
-            self.user_MLP = nn.Linear(self.dim_feat, self.dim_latent)
+            self.user_MLP = nn.Linear(self.dim_feat, self.dim_user)
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
         else:
             self.preference = nn.Parameter(nn.init.xavier_normal_(torch.tensor(
-                np.random.randn(num_item, self.dim_feat), dtype=torch.float32, requires_grad=True),
+                np.random.randn(num_user, self.dim_feat), dtype=torch.float32, requires_grad=True),
                 gain=1).to(self.device))
             self.conv_embed_1 = Base_gcn(self.dim_latent, self.dim_latent, aggr=self.aggr_mode)
 
-    def forward(self, edge_index_drop,edge_index, features):
+    def forward(self, edge_index_drop,edge_index,features):
         # make sure that user profile is not None when has_feature is True
         if self.has_feature:
-            temp_features = self.preference
-            userprofile = F.leaky_relu(self.user_MLP(self.user_profile))
+            temp_features = F.leaky_relu(self.MLP(features)) 
+            userprofile = F.leaky_relu(self.user_MLP(F.normalize(self.user_profile,  p=2, dim=-1)))
+            userprofile = torch.cat((userprofile, self.preference), dim=1)
         else:
-            temp_features = self.preference
-            userprofile = self.user_profile
+            temp_features = features
+            userprofile = self.preference
 
         # temp_features = self.MLP_1(F.leaky_relu(self.MLP(features))) if self.dim_latent else features
         x = torch.cat((userprofile, temp_features), dim=0).to(self.device)
