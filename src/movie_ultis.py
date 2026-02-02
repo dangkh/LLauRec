@@ -1,6 +1,7 @@
 import ast
 import os
 import json
+import pickle
 import pandas as pd
 
 
@@ -39,8 +40,23 @@ metaDF = pd.DataFrame.from_dict(metaDF)
 # print columns
 print(metaDF.columns.to_list())
 print(metaDF.head())
-metaDF['profile'] = metaDF['description']
-metaDF['text_feat'] = metaDF["title"] + ' ' + metaDF["description"]
+
+file_path = f'./data/{dataset}/itm_prf.json'
+# load
+     
+data = []
+with open(file_path, "r", encoding="utf-8") as f:
+    for line in f:
+        if line.strip():  # skip empty lines
+            data.append(json.loads(line))
+     
+prf_text = []
+for idx in data:
+    item_profile = idx['profile']
+    prf_text.append(item_profile)
+
+metaDF['profile'] = prf_text
+metaDF['text_feat'] = metaDF["title"] + ' ' + metaDF["profile"]
 metaDF['asin'] = metaDF.index.astype(str)
 # save to csv
 save_path = os.path.join(data_dir, 'fullMeta_movie.csv')

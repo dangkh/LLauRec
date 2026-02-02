@@ -212,7 +212,8 @@ if __name__ == '__main__':
 				text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
 			else:	
 				# encode text_feat to embeddings and save as .npy
-				text_embeddings = get_profile_embeddings(merged_df['title'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
+				merged_df['text_feat'] = merged_df['title'] + ' ' + merged_df['description']
+				text_embeddings = get_profile_embeddings(merged_df['text_feat'].tolist(), path = os.path.join(dir, f'text_feat.npy'))
 		else:
 			# load existing text_feat embeddings
 			text_embeddings = np.load(os.path.join(dir, f'text_feat.npy'))
