@@ -197,10 +197,12 @@ class VLIF(GeneralRecommender):
         elif self.config['fusion'] == 'pool':
             userRepT = (user_repT + user_feat) / 2
         elif self.config['fusion'] == 'Multi-Head Attention':
-            userRepT, _ = self.multihead_attn(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0))
-            userRepT = userRepT.squeeze(0)
+            output, _ = self.multihead_attn(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0))
+            output = output.squeeze(0)
+            userRepT = output + user_repT
         elif self.config['fusion'] == 'Transformer':
-            userRepT = self.transformer(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0)).squeeze(0)
+            output = self.transformer(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0)).squeeze(0)
+            userRepT = output + user_repT
         else:
             raise NotImplementedError
         user_rep = torch.cat((userRepT, user_repI), dim=1)
