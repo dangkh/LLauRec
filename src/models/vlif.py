@@ -117,7 +117,7 @@ class VLIF(GeneralRecommender):
                 text_emb_dim= self.feat_embed_dim)
             self.diffusion_model = ConditionalDDPM(self.unet, self.numStep)
             self.countE = 0
-        elif config['fusion'] == 'add':
+        elif config['fusion'] in ['add', 'pool']:
             pass
         elif config['fusion'] == 'Multi-Head Attention':
             self.multihead_attn = nn.MultiheadAttention(embed_dim=64, num_heads=4)
