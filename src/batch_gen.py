@@ -150,7 +150,7 @@ if __name__ == '__main__':
 		print(f"Loaded existing user profiles from {user_profile_path}, current size: {len(user_profiles)}")
 	q_message = []
 	q_id = []
-	batch_size = 4
+	batch_size = 16
 	batch_messages = []
 	for uid in tqdm(users):
 		if str(uid) in user_profiles:
@@ -168,6 +168,22 @@ if __name__ == '__main__':
 			batch_messages.append([q_id, q_message])
 			q_message = []
 			q_id = []
+	
+
+	if len(q_message) > 0:
+		batch_messages.append([q_id, q_message])
+		q_message = []
+		q_id = []
+		
+	# save batch_messages[0] to file text for debugging
+	with open(f'./data/{args.dataset}/batch_messages_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.txt', 'w', encoding='utf-8') as f:
+		for uid, messages in zip(batch_messages[0][0], batch_messages[0][1]):
+			f.write(f"User ID: {uid}\n")
+			for msg in messages:
+				f.write(f"{msg['role']}: {msg['content']}\n")
+			f.write("\n====================\n\n")
+	
+
 	
 	for batchId, batchInfo in tqdm(batch_messages):
 		summary = generate_summary(model, tokenizer, batchInfo)
