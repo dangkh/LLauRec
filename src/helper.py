@@ -85,7 +85,7 @@ def getUser_Interaction(interDF):
 def get_itemDesc(metaDF, merge=True):
 	itemDesc = []
 	for idx, row in tqdm(metaDF.iterrows(), total=metaDF.shape[0]):
-		iid = row['iid']
+		# iid = row['iid']
 		title = row['title']
 		description = row['profile']
 		if merge:
@@ -96,8 +96,8 @@ def get_itemDesc(metaDF, merge=True):
 
 
 if __name__ == "__main__":
-	merge_json_files("./data/yelp/usr_prf_LLama_0.json", "./data/yelp/usr_prf_LLama_1.json", "./data/yelp/usr0.json")
-	merge_json_files("./data/yelp/usr_prf_LLama_2.json", "./data/yelp/usr_prf_LLama_3.json", "./data/yelp/usr1.json")
-	merge_json_files("./data/yelp/usr0.json", "./data/yelp/usr1.json", "./data/yelp/tuning_user_profile.json")
+	merge_json_files("./data/book/usr_prf_0.json", "./data/book/usr_prf_1.json", "./data/book/usr0.json")
+	merge_json_files("./data/book/usr_prf_2.json", "./data/book/usr_prf_3.json", "./data/book/usr1.json")
+	merge_json_files("./data/book/usr0.json", "./data/book/usr1.json", "./data/book/tuning_user_profile.json")
 	
 	

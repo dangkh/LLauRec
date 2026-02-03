@@ -16,7 +16,9 @@ import torch_geometric
 from common.abstract_recommender import GeneralRecommender
 from common.loss import BPRLoss, EmbLoss
 from common.init import xavier_uniform_initialization
+from torch.nn import MultiheadAttention
 from .diffusion import  ConditionalDDPM, ConditionalUNet
+from .transformer import TransformerEncoder
 
 class VLIF(GeneralRecommender):
     def __init__(self, config, dataset):
@@ -115,12 +117,12 @@ class VLIF(GeneralRecommender):
                 text_emb_dim= self.feat_embed_dim)
             self.diffusion_model = ConditionalDDPM(self.unet, self.numStep)
             self.countE = 0
-        elif config['fusion'] == 'add':
+        elif config['fusion'] in ['add', 'pool']:
             pass
         elif config['fusion'] == 'Multi-Head Attention':
-            pass
+            self.multihead_attn = nn.MultiheadAttention(embed_dim=64, num_heads=4)
         elif config['fusion'] == 'Transformer':
-            pass
+            self.transformer = TransformerEncoder(64, num_heads= 4, layers=2)
         else:
             raise NotImplementedError
         
@@ -192,10 +194,17 @@ class VLIF(GeneralRecommender):
             userRepT = user_repT + generated_cid
         elif self.config['fusion'] == 'add':
             userRepT = user_repT + user_feat
+        elif self.config['fusion'] == 'pool':
+            userRepT = (user_repT + user_feat) / 2
         elif self.config['fusion'] == 'Multi-Head Attention':
-            pass
+            output, _ = self.multihead_attn(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0))
+            output = output.squeeze(0)
+            userRepT = output + user_repT
         elif self.config['fusion'] == 'Transformer':
-            pass
+            output = self.transformer(user_repT.unsqueeze(0), user_feat.unsqueeze(0), user_feat.unsqueeze(0)).squeeze(0)
+            userRepT = output + user_repT
+        else:
+            raise NotImplementedError
         user_rep = torch.cat((userRepT, user_repI), dim=1)
 
         self.result_embed = torch.cat((user_rep, item_rep), dim=0)
@@ -207,14 +216,15 @@ class VLIF(GeneralRecommender):
         return pos_scores, neg_scores
 
     def calculate_loss(self, interaction):
-        ceoff = 0.5
-        if self.countE < 100:
-            ceoff = 1.0
-            self.countE += 1
-        user = interaction[0]
         pos_scores, neg_scores = self.forward(interaction)
         loss_value = -torch.mean(torch.log2(torch.sigmoid(pos_scores - neg_scores)))
-        return loss_value + ceoff * self.lossD
+        if self.config['fusion'] == 'diffusion':
+            ceoff = 0.5
+            if self.countE < 100:
+                ceoff = 1.0
+                self.countE += 1
+            return loss_value + ceoff * self.lossD
+        return loss_value
 
     def full_sort_predict(self, interaction):
         user_tensor = self.result_embed[:self.n_users]

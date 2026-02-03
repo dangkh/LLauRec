@@ -32,8 +32,10 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
+	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
+	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=True, help='use candidate prompt or not')
 	args, _ = parser.parse_known_args()
-
+	print(args)
 
 	fourbit_models = [
 		"unsloth/Qwen3-4B-Instruct-2507-unsloth-bnb-4bit", # Qwen 14B 2x faster
@@ -76,10 +78,14 @@ if __name__ == '__main__':
 	)
 	with open("src/prompts.yaml", "r") as f:
 		all_prompts = yaml.safe_load(f)
-	tun_prompt = all_prompts[args.dataset]['tuning']
-	sys_prompt = all_prompts[args.dataset]['sys']
 
-	dataPath = f"./data/{args.dataset}/tuningData.jsonl"
+	tuningP, systemP1, systemP2 = "tuning", "sys", "user"
+	if args.prompt_candidate:
+		tuningP, systemP1, systemP2 = "tuning_candidate", "sys_candidate", "user"
+	tun_prompt = all_prompts[args.dataset][tuningP]
+	sys_prompt = all_prompts[args.dataset][systemP1]
+	
+	dataPath = f"./data/{args.dataset}/candidate_{args.prompt_candidate}_profile_{args.prompt_profile}_tuningData.jsonl"
 	dataset = load_dataset("json", data_files=dataPath)
 	datalist = []
 	for sample in dataset['train']:
@@ -111,8 +117,8 @@ if __name__ == '__main__':
 			per_device_train_batch_size = 1,
 			gradient_accumulation_steps = 4, # Use GA to mimic batch size!
 			warmup_steps = 5,
-			# num_train_epochs = 1, # Set this for 1 full training run.
-			max_steps = 300,
+			num_train_epochs = 1, # Set this for 1 full training run.
+			# max_steps = 300,
 			learning_rate = 2e-4, # Reduce to 2e-5 for long training runs
 			logging_steps = 1,
 			optim = "adamw_torch",
@@ -132,5 +138,5 @@ if __name__ == '__main__':
 	tokenizer.decode([tokenizer.pad_token_id if x == -100 else x for x in trainer.train_dataset[100]["labels"]]).replace(tokenizer.pad_token, " ")				
 
 	trainer_stats = trainer.train()
-	model.save_pretrained(f"qwen4B_it_model_{args.dataset}")  # Local saving
-	tokenizer.save_pretrained(f"qwen4B_it_model_{args.dataset}")
+	model.save_pretrained(f"qwen4B_it_model_{args.dataset}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}")  # Local saving
+	tokenizer.save_pretrained(f"qwen4B_it_model_{args.dataset}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}")

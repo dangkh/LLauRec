@@ -42,12 +42,15 @@ def generate_summary(model, tokenizer, system_prompt, content):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
-	parser.add_argument('--tuning',  '-t', default=False, help='load tuned model or pretrain')
+	parser.add_argument('--tuning',  '-t', type=bool, default=True, help='load tuned model or pretrain')
 	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
 	parser.add_argument("--shard", type=int, default=0)
 	parser.add_argument("--num_shards", type=int, default=1)
 	parser.add_argument("--out", type=str, default="sample_user_profile.json")
+	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
+	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=True, help='use candidate prompt or not')
 	args, _ = parser.parse_known_args()
+	print(args)
 
 	# =========================
 	# Load meta data
@@ -107,7 +110,7 @@ if __name__ == '__main__':
 
 	selected_model = "unsloth/Qwen3-4B-Instruct-2507"
 	if args.tuning:
-		selected_model = f"./qwen4B_it_model_{args.dataset}"
+		selected_model = f"./qwen4B_it_model_{args.dataset}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}"
 
 	print(selected_model)
 	
@@ -127,7 +130,7 @@ if __name__ == '__main__':
 	listUser = list(user_interactions.keys())
 	users = listUser[args.shard::args.num_shards]
 
-	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.shard}.json'
+	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.json'
 	if os.path.exists(user_profile_path):
 		with open(user_profile_path, 'r', encoding='utf-8') as f:
 			user_profiles = json.load(f)
