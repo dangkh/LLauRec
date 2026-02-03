@@ -18,15 +18,9 @@ def get_message(system_prompt, content):
 		{"role": "system", "content": system_prompt},
 		{"role" : "user", "content" : content}
 	]
+	return messages
 
 def generate_summary(model, tokenizer, batchInfo):
-	
-	input_text = tokenizer.apply_chat_template(
-		messages,
-		tokenize = False,
-		add_generation_prompt = True, # Must add for generation
-		enable_thinking = True
-	)
 	allMessages = []
 	for messages in batchInfo:
 		input_text = tokenizer.apply_chat_template(
@@ -41,6 +35,7 @@ def generate_summary(model, tokenizer, batchInfo):
 		allMessages,
 		return_tensors = "pt",
 		add_special_tokens = True,
+		padding=True,
 	).to("cuda")
 
 	output = model.generate(
@@ -49,9 +44,13 @@ def generate_summary(model, tokenizer, batchInfo):
 		temperature = 0.5, top_p = 0.95, top_k = 20, # For non thinking
 		do_sample = False
 	)
-	stop
-	generated_tokens = output[0][inputs["input_ids"].shape[-1]:]
-	return tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+	generated_ids_trimmed = [
+    	out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, output)
+	]
+	output_texts = tokenizer.batch_decode(
+		generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+	)
+	return output_texts
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
