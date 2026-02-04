@@ -20,6 +20,27 @@ from torch.nn import MultiheadAttention
 from .diffusion import  ConditionalDDPM, ConditionalUNet
 from .transformer import TransformerEncoder
 
+
+def edge_dropout_cf(edge_index, num_user, keep_rate):
+    if keep_rate >= 1.0:
+        return edge_index
+
+    row, col = edge_index
+    device = edge_index.device
+
+    # chuẩn hóa thành (u,v) với u là user
+    is_u2i = row < num_user
+    u = torch.where(is_u2i, row, col)
+    v = torch.where(is_u2i, col, row)
+
+    key = u * (edge_index.max() + 1) + v
+    uniq, inv = torch.unique(key, return_inverse=True)
+
+    keep = torch.rand(uniq.size(0), device=device) < keep_rate
+    mask = keep[inv]
+
+    return edge_index[:, mask]
+
 def cal_infonce_loss(embeds1, embeds2, all_embeds2, temp=1.0):
     normed_embeds1 = embeds1 / torch.sqrt(1e-8 + embeds1.square().sum(-1, keepdim=True))
     normed_embeds2 = embeds2 / torch.sqrt(1e-8 + embeds2.square().sum(-1, keepdim=True))
@@ -187,6 +208,9 @@ class VLIF(GeneralRecommender):
         user_feat = F.normalize(self.mlp_user(self.user_feat))
         
         self.t_rep, self.t_preference = self.t_gcn(self.edge_index, item_feat)
+        # e1 = edge_dropout_cf(self.edge_index, self.n_users, keep_rate=0.9)
+        # e2 = edge_dropout_cf(self.edge_index, self.n_users, keep_rate=0.9)
+        # sgl thì replace edge_index with e1, e2. set noise = False
         self.id_rep1, _ = self.id_gcn(self.edge_index, self.id_embedding.weight, noise=True)
         self.id_rep2, _ = self.id_gcn(self.edge_index, self.id_embedding.weight, noise=True)
         self.id_rep, _ = self.id_gcn(self.edge_index, self.id_embedding.weight)
