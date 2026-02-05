@@ -132,25 +132,6 @@ def betas_from_linear_variance(steps, variance, max_beta=0.999):
         betas.append(min(1 - alpha_bar[i] / alpha_bar[i - 1], max_beta))
     return np.array(betas)
 
-def betas_for_alpha_bar(num_diffusion_timesteps, alpha_bar, max_beta=0.999):
-    """
-    Create a beta schedule that discretizes the given alpha_t_bar function,
-    which defines the cumulative product of (1-beta) over time from t = [0,1].
-
-    :param num_diffusion_timesteps: the number of betas to produce.
-    :param alpha_bar: a lambda that takes an argument t from 0 to 1 and
-                      produces the cumulative product of (1-beta) up to that
-                      part of the diffusion process.
-    :param max_beta: the maximum beta to use; use values lower than 1 to
-                     prevent singularities.
-    """
-    betas = []
-    for i in range(num_diffusion_timesteps):
-        t1 = i / num_diffusion_timesteps
-        t2 = (i + 1) / num_diffusion_timesteps
-        betas.append(min(1 - alpha_bar(t2) / alpha_bar(t1), max_beta))
-    return np.array(betas)
-
 class ConditionalDDPM:
     """
     Conditional Denoising Diffusion Probabilistic Model
@@ -167,10 +148,9 @@ class ConditionalDDPM:
             end = self.noiseScale * beta_end
             self.betas = torch.linspace(start, end, T).to(device)
             if schedule == 'linear_var':
-                self.betas = torch.tensor(betas_from_linear_variance(T, np.linspace(start, end, T))).to(device)
-                self.betas = torch.tensor(self.betas).to(device)
+                self.betas = torch.tensor(betas_from_linear_variance(T, np.linspace(start, end, T)), dtype=torch.float32).to(device)
         else:
-            self.betas = torch.tensor(betas_for_alpha_bar( T, lambda t: math.cos((t + 0.008) / 1.008 * math.pi / 2) ** 2)).to(device)
+           raise ValueError(f"Unsupported noise schedule: {schedule}")
         self.alphas = 1.0 - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
         self.alphas_cumprod_prev = F.pad(self.alphas_cumprod[:-1], (1, 0), value=1.0)
