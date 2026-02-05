@@ -22,7 +22,7 @@ def generate_summary(model, tokenizer, system_prompt, content):
 		messages,
 		tokenize = False,
 		add_generation_prompt = True, # Must add for generation
-		enable_thinking = True
+		enable_thinking = False
 	)
 	inputs = tokenizer(
 		input_text,
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 	if args.tuning:
 		user_profile_path = f'./data/{args.dataset}/tuning{args.LLM}_usr_prf_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.json'
 	else:
-		user_profile_path = f'./data/{args.dataset}/usr_prf_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.json'
+		user_profile_path = f'./data/{args.dataset}/{args.LLM}_usr_prf_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.json'
 		
 	if os.path.exists(user_profile_path):
 		with open(user_profile_path, 'r', encoding='utf-8') as f:
