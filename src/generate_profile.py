@@ -127,7 +127,11 @@ if __name__ == '__main__':
 	listUser = list(user_interactions.keys())
 	users = listUser[args.shard::args.num_shards]
 
-	user_profile_path = f'./data/{args.dataset}/usr_prf_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.json'
+	if args.tuning:
+		user_profile_path = f'./data/{args.dataset}/tuning{args.LLM}_usr_prf_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.json'
+	else:
+		user_profile_path = f'./data/{args.dataset}/usr_prf_{args.shard}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}.json'
+		
 	if os.path.exists(user_profile_path):
 		with open(user_profile_path, 'r', encoding='utf-8') as f:
 			user_profiles = json.load(f)
