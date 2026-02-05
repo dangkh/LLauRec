@@ -50,6 +50,7 @@ class VLIF(GeneralRecommender):
         self.mm_adj = None
         self.numStep = config['num_diffusion_steps']
         self.config = config
+        self.noise_schedule = config['noise_schedule']
 
         dataset_path = os.path.abspath(config['data_path'] + config['dataset'])
         
@@ -115,7 +116,7 @@ class VLIF(GeneralRecommender):
                 time_emb_dim=self.feat_embed_dim,
                 hidden_dim= self.feat_embed_dim * 2,
                 text_emb_dim= self.feat_embed_dim)
-            self.diffusion_model = ConditionalDDPM(self.unet, self.numStep)
+            self.diffusion_model = ConditionalDDPM(self.unet, self.numStep, schedule=self.noise_schedule)
             self.countE = 0
         elif config['fusion'] in ['add', 'pool']:
             pass
