@@ -43,7 +43,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dataset', '-d', type=str, default='book', help='name of datasets')
 	parser.add_argument('--tuning',  '-t', type=bool, default=True, help='load tuned model or pretrain')
-	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: Llama or Gemma, Qwen')
+	parser.add_argument('--LLM', type=str, default='Llama', help='name of LLM to use: 06B, or 4B, 8B')
 	parser.add_argument("--shard", type=int, default=0)
 	parser.add_argument("--num_shards", type=int, default=1)
 	parser.add_argument("--out", type=str, default="sample_user_profile.json")
@@ -94,23 +94,20 @@ if __name__ == '__main__':
 
 
 	fourbit_models = [
-		"unsloth/Qwen3-4B-Instruct-2507-unsloth-bnb-4bit", # Qwen 14B 2x faster
-		"unsloth/Qwen3-4B-Thinking-2507-unsloth-bnb-4bit",
 		"unsloth/Qwen3-8B-unsloth-bnb-4bit",
-		"unsloth/Qwen3-14B-unsloth-bnb-4bit",
-		"unsloth/Qwen3-32B-unsloth-bnb-4bit",
-
-		# 4bit dynamic quants for superior accuracy and low memory use
-		"unsloth/gemma-3-12b-it-unsloth-bnb-4bit",
-		"unsloth/Phi-4",
-		"unsloth/Llama-3.1-8B",
-		"unsloth/Llama-3.2-3B",
-		"unsloth/orpheus-3b-0.1-ft-unsloth-bnb-4bit" # [NEW] We support TTS models!
+		"unsloth/Qwen3-4B-Instruct-2507",
+		"unsloth/Qwen3-0.6B-unsloth-bnb-4bit",
 	] # More models at https://huggingface.co/unsloth
-
-	selected_model = "unsloth/Qwen3-4B-Instruct-2507"
+	
 	if args.tuning:
-		selected_model = f"./qwen4B_it_model_{args.dataset}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}"
+		selected_model = f"./qwen{args.LLM}_it_model_{args.dataset}_candidate_{args.prompt_candidate}_profile_{args.prompt_profile}"
+	else:
+		if args.LLM == "06B":
+			selected_model = "unsloth/Qwen3-0.6B-unsloth-bnb-4bit"
+		elif args.LLM == "8B":
+			selected_model = "unsloth/Qwen3-8B-unsloth-bnb-4bit"
+		else:
+			selected_model = "unsloth/Qwen3-4B-Instruct-2507"
 
 	print(selected_model)
 	
