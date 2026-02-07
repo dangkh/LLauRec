@@ -87,7 +87,7 @@ if __name__ == '__main__':
 	for sample in dataset['train']:
 		tmp = {
 			"conversations": [
-				{"role": "user", "content": sys_prompt + sample["userprompt"]},
+				{"role": "user", "content":  sample["systemprompt"] + sample["userprompt"]},
 				{"role": "assistant", "content": sample["answer"]},
 			]
 		}

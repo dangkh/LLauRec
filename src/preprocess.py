@@ -233,7 +233,8 @@ if __name__ == '__main__':
 			tuningP, systemP1, systemP2 = "tuning", "sys", "user"
 			if args.prompt_candidate:
 				tuningP, systemP1, systemP2 = "tuning_candidate", "sys_candidate", "user"
-			tun_prompt = all_prompts[args.dataset][tuningP]
+			tun_prompt1 = all_prompts[args.dataset]["tuning"]
+			tun_prompt2 = all_prompts[args.dataset]["tuning_candidate"]
 			sys_prompt1 = all_prompts[args.dataset][systemP1]
 			sys_prompt2 = all_prompts[args.dataset][systemP2]
 
@@ -277,9 +278,13 @@ if __name__ == '__main__':
 							choose_def = f"Description: {description}\n"
 						tmp = f"Title: {title}\n{choose_def}\n"
 						candidateInfo += tmp
-					
-					userprompt = tun_prompt.format(itemInfo, candidateInfo)
+					if args.prompt_candidate:
+						userprompt = tun_prompt2.format(itemInfo, candidateInfo)
+					else:
+						userprompt = tun_prompt1.format(itemInfo, "")
 					answer = f"{itemDesc[ground_truth][0]}"
+					if answer == "":
+						continue
 					sys_prompt = sys_prompt1
 				else:
 					itemInfo = ""
@@ -290,7 +295,7 @@ if __name__ == '__main__':
 							choose_def = f"Description: {description}\n"
 						tmp = f"Title: {title}\n{choose_def}\n"
 						itemInfo += tmp
-					userprompt = tun_prompt.format(itemInfo, "")
+					userprompt = tun_prompt1.format(itemInfo, "")
 					sys_prompt = sys_prompt2
 					answer = str(sampleUser[str(uid)])
 
