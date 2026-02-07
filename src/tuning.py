@@ -92,6 +92,10 @@ if __name__ == '__main__':
 			]
 		}
 		datalist.append(tmp)
+	# save 10 samples to check the format
+	with open(f"./data/{args.dataset}/check_tuning_data.json", 'w', encoding='utf-8') as f:
+		json.dump(datalist[:10], f, ensure_ascii=False, indent=4)
+		
 	dataset = Dataset.from_list(datalist)
 	from unsloth.chat_templates import get_chat_template
 	tokenizer = get_chat_template(
