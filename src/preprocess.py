@@ -28,6 +28,7 @@ if __name__ == '__main__':
 	parser.add_argument("--export_item", '-ei', type=bool, default=False, help='whether to export item data or not')
 	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
 	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=True, help='use candidate prompt or not')
+	parser.add_argument('--num_neg', '-n', type=int, default=3, help='number of negative samples for tuning')
 	args, _ = parser.parse_known_args()
 	print(args)
 	if args.user:
@@ -265,7 +266,7 @@ if __name__ == '__main__':
 							continue
 						listC.append(c)
 					random.shuffle(listC)
-					listC = listC[:3]
+					listC = listC[:args.num_neg]
 					checkarray.append(len(listC))
 					candidateInfo = ""
 					# must add ground_truth to candidates
@@ -308,6 +309,6 @@ if __name__ == '__main__':
 
 			
 			dataset = Dataset.from_list(dataset)
-			dataset.to_json(f"./data/{args.dataset}/candidate_{args.prompt_candidate}_profile_{args.prompt_profile}_tuningData.jsonl")
+			dataset.to_json(f"./data/{args.dataset}/candidate_{args.prompt_candidate}_profile_{args.prompt_profile}_tuningData_{args.num_neg}.jsonl")
 			# stat for candidate
 			print(np.mean(checkarray), np.min(checkarray), np.max(checkarray))	

@@ -34,6 +34,7 @@ if __name__ == '__main__':
 	parser.add_argument('--LLM', type=str, default='06B', help='name of LLM to use: 06B, or 4B, 8B')
 	parser.add_argument('--prompt_profile', '-pp', type=bool, default=True, help='ablation: item profile in prompt or not')
 	parser.add_argument('--prompt_candidate', '-pc', type=bool, default=True, help='use candidate prompt or not')
+	parser.add_argument('--num_neg', '-n', type=int, default=3, help='number of negative samples for tuning')
 	args, _ = parser.parse_known_args()
 	print(args)
 
@@ -81,7 +82,7 @@ if __name__ == '__main__':
 	tun_prompt = all_prompts[args.dataset][tuningP]
 	sys_prompt = all_prompts[args.dataset][systemP1]
 	
-	dataPath = f"./data/{args.dataset}/candidate_{args.prompt_candidate}_profile_{args.prompt_profile}_tuningData.jsonl"
+	dataPath = f"./data/{args.dataset}/candidate_{args.prompt_candidate}_profile_{args.prompt_profile}_tuningData_{args.num_neg}.jsonl"
 	dataset = load_dataset("json", data_files=dataPath)
 	datalist = []
 	for sample in dataset['train']:
@@ -93,9 +94,9 @@ if __name__ == '__main__':
 		}
 		datalist.append(tmp)
 	# save 10 samples to check the format
-	with open(f"./data/{args.dataset}/check_tuning_data.json", 'w', encoding='utf-8') as f:
+	with open(f"./data/{args.dataset}/check_tuning_data_{args.num_neg}.json", 'w', encoding='utf-8') as f:
 		json.dump(datalist[:10], f, ensure_ascii=False, indent=4)
-		
+
 	dataset = Dataset.from_list(datalist)
 	from unsloth.chat_templates import get_chat_template
 	tokenizer = get_chat_template(
